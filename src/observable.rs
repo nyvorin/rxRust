@@ -98,6 +98,7 @@ use crate::ops::{
   throttle::{Throttle, ThrottleEdge, ThrottleWhenParam},
   throw_if_empty::ThrowIfEmpty,
   time_interval::TimeInterval,
+  timeout::{Timeout, TimeoutError, default_timeout_error},
   timestamp::Timestamp,
   with_latest_from::WithLatestFrom,
   zip::Zip,
@@ -1326,6 +1327,76 @@ pub trait Observable: Context {
     self, duration: Duration, scheduler: Sch,
   ) -> Self::With<Debounce<Self::Inner, Sch>> {
     self.transform(|core| Debounce { source: core, duration, scheduler })
+  }
+
+  /// Error with `TimeoutError` if the source is silent for `duration`
+  ///
+  /// The timer restarts after every item. Requires `Err: From<TimeoutError>`.
+  ///
+  /// # Examples
+  ///
+  /// ```rust,no_run
+  /// use rxrust::prelude::*;
+  ///
+  /// # #[tokio::main(flavor = "local")]
+  /// # async fn main() {
+  /// Local::never()
+  ///   .map_to(0)
+  ///   .map_err(|_: std::convert::Infallible| TimeoutError)
+  ///   .timeout(Duration::from_millis(50))
+  ///   .on_error(|e| println!("{}", e))
+  ///   .subscribe(|_| {});
+  /// # }
+  /// ```
+  #[allow(clippy::type_complexity)]
+  fn timeout(
+    self, duration: Duration,
+  ) -> Self::With<Timeout<Self::Inner, Self::Scheduler, fn() -> Self::Err>>
+  where
+    Self::Err: From<TimeoutError>,
+  {
+    let scheduler = self.scheduler().clone();
+    self.timeout_or_else_with(
+      duration,
+      default_timeout_error::<Self::Err> as fn() -> Self::Err,
+      scheduler,
+    )
+  }
+
+  /// [`Observable::timeout`] with an explicit scheduler
+  #[allow(clippy::type_complexity)]
+  fn timeout_with<Sch>(
+    self, duration: Duration, scheduler: Sch,
+  ) -> Self::With<Timeout<Self::Inner, Sch, fn() -> Self::Err>>
+  where
+    Self::Err: From<TimeoutError>,
+  {
+    self.timeout_or_else_with(
+      duration,
+      default_timeout_error::<Self::Err> as fn() -> Self::Err,
+      scheduler,
+    )
+  }
+
+  /// Error with `error_fn()` if the source is silent for `duration`
+  fn timeout_or_else<F>(
+    self, duration: Duration, error_fn: F,
+  ) -> Self::With<Timeout<Self::Inner, Self::Scheduler, F>>
+  where
+    F: FnOnce() -> Self::Err,
+  {
+    let scheduler = self.scheduler().clone();
+    self.timeout_or_else_with(duration, error_fn, scheduler)
+  }
+
+  /// [`Observable::timeout_or_else`] with an explicit scheduler
+  fn timeout_or_else_with<F, Sch>(
+    self, duration: Duration, error_fn: F, scheduler: Sch,
+  ) -> Self::With<Timeout<Self::Inner, Sch, F>>
+  where
+    F: FnOnce() -> Self::Err,
+  {
+    self.transform(|source| Timeout { source, duration, scheduler, error_fn })
   }
 
   /// Re-emits all notifications from this Observable on the specified
