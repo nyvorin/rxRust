@@ -58,6 +58,7 @@ use crate::ops::{
   finalize::Finalize,
   flat_map::FlatMap,
   group_by::GroupBy,
+  ignore_elements::IgnoreElements,
   into_future::{ObservableFutureOf, SupportsIntoFuture},
   into_stream::SupportsIntoStream,
   last::Last,
@@ -712,6 +713,23 @@ pub trait Observable: Context {
     F: for<'a> FnMut(&Self::Item<'a>) -> bool,
   {
     self.transform(|source| Every { source, predicate })
+  }
+
+  /// Drop every item and mirror only the terminal notification
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter([1, 2, 3])
+  ///   .ignore_elements()
+  ///   .on_complete(|| println!("done"))
+  ///   .subscribe(|_| unreachable!());
+  /// ```
+  #[doc(alias = "ignoreElements")]
+  fn ignore_elements(self) -> Self::With<IgnoreElements<Self::Inner>> {
+    self.transform(|source| IgnoreElements { source })
   }
 
   /// Emit values while a predicate returns true
