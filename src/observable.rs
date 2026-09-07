@@ -52,6 +52,7 @@ use crate::ops::{
   delay::{Delay, DelaySubscriptionOp},
   distinct::{Distinct, DistinctKey},
   distinct_until_changed::{DistinctUntilChanged, DistinctUntilKeyChanged},
+  every::Every,
   filter::Filter,
   filter_map::FilterMap,
   finalize::Finalize,
@@ -689,6 +690,28 @@ pub trait Observable: Context {
     Item: Clone,
   {
     self.transform(|source| Contains { source, target })
+  }
+
+  /// Emit whether every item satisfies a predicate
+  ///
+  /// Emits `false` and completes as soon as an item fails the predicate,
+  /// unsubscribing the source. Emits `true` on completion when every item
+  /// passed, including for an empty source.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let observable = Local::from_iter([1, 2, 3]).every(|v| *v > 0);
+  /// // Emits: true
+  /// ```
+  #[doc(alias = "all")]
+  fn every<F>(self, predicate: F) -> Self::With<Every<Self::Inner, F>>
+  where
+    F: for<'a> FnMut(&Self::Item<'a>) -> bool,
+  {
+    self.transform(|source| Every { source, predicate })
   }
 
   /// Emit values while a predicate returns true
