@@ -60,7 +60,7 @@ Mirror of `start_with`. After the source completes, emits the values in order, t
 
 ### `timestamp()` and `time_interval()`
 
-`timestamp` wraps each item as `Timestamped<Item> { value, timestamp: Instant }` using `crate::scheduler::Instant` so it works on wasm. `time_interval` wraps each item as `TimeInterval<Item> { value, interval: Duration }`, where the interval is the time since the previous emission, or since subscription for the first. Both structs derive `Debug`, `Clone`, `PartialEq`.
+`timestamp` wraps each item as `Timestamped<Item> { value, timestamp: Instant }` using `crate::scheduler::Instant` so it works on wasm. `time_interval` wraps each item as `Elapsed<Item> { value, interval: Duration }`, where the interval is the time since the previous emission, or since subscription for the first. The value struct is named `Elapsed` rather than `TimeInterval` so the operator struct can keep the conventional operator name. Both structs derive `Debug`, `Clone`, `Copy`, `PartialEq`, `Eq`.
 
 ### `race(other)` and `race_observables(iter)`
 
