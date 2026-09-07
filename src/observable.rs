@@ -1339,6 +1339,8 @@ pub trait Observable: Context {
   /// # Examples
   ///
   /// ```rust,no_run
+  /// # #[cfg(not(target_arch = "wasm32"))]
+  /// # {
   /// use rxrust::prelude::*;
   ///
   /// # #[tokio::main(flavor = "local")]
@@ -1349,6 +1351,7 @@ pub trait Observable: Context {
   ///   .timeout(Duration::from_millis(50))
   ///   .on_error(|e| println!("{}", e))
   ///   .subscribe(|_| {});
+  /// # }
   /// # }
   /// ```
   #[allow(clippy::type_complexity)]
@@ -1622,6 +1625,8 @@ pub trait Observable: Context {
   /// # Examples
   ///
   /// ```rust,no_run
+  /// # #[cfg(not(target_arch = "wasm32"))]
+  /// # {
   /// use rxrust::prelude::*;
   ///
   /// # #[tokio::main(flavor = "local")]
@@ -1629,6 +1634,7 @@ pub trait Observable: Context {
   /// Local::interval(Duration::from_millis(10))
   ///   .audit_time(Duration::from_millis(100))
   ///   .subscribe(|v| println!("latest in window: {}", v));
+  /// # }
   /// # }
   /// ```
   #[doc(alias = "auditTime")]

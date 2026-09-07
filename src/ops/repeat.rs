@@ -20,6 +20,8 @@ use crate::{
 /// # Examples
 ///
 /// ```rust,no_run
+/// # #[cfg(not(target_arch = "wasm32"))]
+/// # {
 /// use rxrust::prelude::*;
 ///
 /// # #[tokio::main(flavor = "local")]
@@ -28,6 +30,7 @@ use crate::{
 ///   .repeat(3)
 ///   .subscribe(|v| println!("{}", v));
 /// // Prints 1, 2, 1, 2, 1, 2 across three ticks
+/// # }
 /// # }
 /// ```
 #[derive(Clone)]

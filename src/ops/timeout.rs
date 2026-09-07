@@ -34,6 +34,8 @@ pub fn default_timeout_error<E: From<TimeoutError>>() -> E { TimeoutError.into()
 /// # Examples
 ///
 /// ```rust,no_run
+/// # #[cfg(not(target_arch = "wasm32"))]
+/// # {
 /// use rxrust::prelude::*;
 ///
 /// # #[tokio::main(flavor = "local")]
@@ -44,6 +46,7 @@ pub fn default_timeout_error<E: From<TimeoutError>>() -> E { TimeoutError.into()
 ///   .timeout(Duration::from_millis(50))
 ///   .on_error(|e| println!("{}", e))
 ///   .subscribe(|_| {});
+/// # }
 /// # }
 /// ```
 #[derive(Clone)]
