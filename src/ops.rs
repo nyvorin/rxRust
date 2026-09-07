@@ -93,6 +93,7 @@ pub mod time_interval;
 pub mod timestamp;
 pub mod with_latest_from;
 pub mod zip;
+pub mod zip_all;
 
 // Re-exports
 pub use average::*;
@@ -159,6 +160,7 @@ pub use time_interval::*;
 pub use timestamp::*;
 pub use with_latest_from::*;
 pub use zip::*;
+pub use zip_all::*;
 
 #[cfg(test)]
 mod aggregation_tests;

@@ -1143,6 +1143,38 @@ pub trait ObservableFactory: Context<Inner = ()> {
       .collect();
     Self::lift(crate::ops::combine_latest_all::CombineLatestAll { sources })
   }
+
+  /// Zip many observables, emitting the nth item of each as one `Vec`.
+  ///
+  /// Completes as soon as a completed source has no buffered item left,
+  /// because no further row can be formed. An empty iterator completes
+  /// immediately.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::zip_observables([Local::from_iter(vec![1, 2, 3]), Local::from_iter(vec![10, 20])])
+  ///   .subscribe(|v| println!("{:?}", v));
+  /// // Prints: [1, 10], [2, 20]
+  /// ```
+  ///
+  /// # See Also
+  ///
+  /// * [`Observable::zip`] - Binary instance method emitting tuples
+  #[doc(alias = "zip")]
+  fn zip_observables<O, I>(observables: I) -> Self::With<crate::ops::zip_all::ZipAll<O>>
+  where
+    O: ObservableType,
+    I: IntoIterator<Item = Self::With<O>>,
+  {
+    let sources = observables
+      .into_iter()
+      .map(Context::into_inner)
+      .collect();
+    Self::lift(crate::ops::zip_all::ZipAll { sources })
+  }
 }
 
 // Blanket implementation: Any `Context<Inner = ()>`, reuires `Inner = ()` to
