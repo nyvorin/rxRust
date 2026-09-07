@@ -1080,6 +1080,34 @@ pub trait ObservableFactory: Context<Inner = ()> {
       .collect();
     Self::lift(crate::ops::race_all::RaceAll { sources })
   }
+
+  /// Wait for every observable to complete, then emit their last values.
+  ///
+  /// Emits one `Vec` of last values in input order and completes. If any
+  /// source completes without emitting, completes without a value. Errors
+  /// are forwarded immediately. An empty iterator completes immediately.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::fork_join_observables([Local::from_iter(vec![1, 2]), Local::from_iter(vec![3])])
+  ///   .subscribe(|v| println!("{:?}", v));
+  /// // Prints: [2, 3]
+  /// ```
+  #[doc(alias = "forkJoin")]
+  fn fork_join_observables<O, I>(observables: I) -> Self::With<crate::ops::fork_join::ForkJoin<O>>
+  where
+    O: ObservableType,
+    I: IntoIterator<Item = Self::With<O>>,
+  {
+    let sources = observables
+      .into_iter()
+      .map(Context::into_inner)
+      .collect();
+    Self::lift(crate::ops::fork_join::ForkJoin { sources })
+  }
 }
 
 // Blanket implementation: Any `Context<Inner = ()>`, reuires `Inner = ()` to
