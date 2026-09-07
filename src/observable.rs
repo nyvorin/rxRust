@@ -77,6 +77,7 @@ use crate::ops::{
   pairwise::Pairwise,
   race::Race,
   reduce::{Reduce, ReduceFn, ReduceInitialFn},
+  ref_count::{PublishSubjectOf, RefCount, ShareOf},
   retry::{Retry, RetryPolicy},
   sample::Sample,
   scan::Scan,
@@ -2042,9 +2043,7 @@ pub trait Observable: Context {
   /// // Later, disconnect to stop multicasting
   /// connection.unsubscribe();
   /// ```
-  fn multicast<'a>(
-    self, subject: Subject<SubjectPtr<'a, Self, Self::Item<'a>, Self::Err>>,
-  ) -> ConnectableObservableCtx<'a, Self> {
+  fn multicast<Sub>(self, subject: Sub) -> Self::With<ConnectableObservable<Self::Inner, Sub>> {
     self.transform(|source| ConnectableObservable { source, subject })
   }
 
@@ -2150,7 +2149,37 @@ pub trait Observable: Context {
   /// // Later, disconnect to stop multicasting
   /// connection.unsubscribe();
   /// ```
-  fn publish<'a>(self) -> ConnectableObservableCtx<'a, Self> { self.multicast(Subject::default()) }
+  fn publish<'a>(self) -> ConnectableObservableCtx<'a, Self> {
+    self.multicast(PublishSubjectOf::<'a, Self>::default())
+  }
+
+  /// Multicast through a plain `Subject`, connecting the source when the
+  /// first subscriber arrives and disconnecting when the last one leaves
+  ///
+  /// Equivalent to `publish().ref_count()`.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let shared = Local::from_iter(vec![1, 2]).share();
+  /// shared.clone().subscribe(|v| println!("A: {}", v));
+  /// shared.subscribe(|v| println!("B: {}", v));
+  /// ```
+  fn share<'a>(self) -> ShareOf<'a, Self>
+  where
+    Self::Inner: CoreObservable<Self::With<PublishSubjectOf<'a, Self>>>,
+  {
+    let connection = Self::RcMut::from(None);
+    self.transform(|source| RefCount {
+      connectable: ConnectableObservable {
+        source,
+        subject: PublishSubjectOf::<'a, Self>::default(),
+      },
+      connection,
+    })
+  }
 
   /// Convert this observable into a ConnectableObservable for mutable reference
   /// broadcasting
@@ -2198,9 +2227,7 @@ pub trait Observable: Context {
   /// connection.unsubscribe();
   /// ```
   #[allow(clippy::type_complexity)]
-  fn publish_mut_ref<'a, Item: 'a>(
-    self,
-  ) -> Self::With<ConnectableObservable<Self::Inner, SubjectPtrMutRef<'a, Self, Item, Self::Err>>>
+  fn publish_mut_ref<'a, Item: 'a>(self) -> ConnectableObservableCtxMutRef<'a, Self, Item>
   where
     Self: Observable<Item<'a> = &'a mut Item> + 'a,
   {
@@ -2751,16 +2778,12 @@ pub trait Observable: Context {
   }
 }
 
-pub type ConnectableObservableCtx<'a, O> = <O as Context>::With<
-  ConnectableObservable<
-    <O as Context>::Inner,
-    SubjectPtr<'a, O, <O as Observable>::Item<'a>, <O as Observable>::Err>,
-  >,
->;
+pub type ConnectableObservableCtx<'a, O> =
+  <O as Context>::With<ConnectableObservable<<O as Context>::Inner, PublishSubjectOf<'a, O>>>;
 pub type ConnectableObservableCtxMutRef<'a, O, Item> = <O as Context>::With<
   ConnectableObservable<
     <O as Context>::Inner,
-    SubjectPtrMutRef<'a, O, Item, <O as Observable>::Err>,
+    Subject<SubjectPtrMutRef<'a, O, Item, <O as Observable>::Err>>,
   >,
 >;
 
