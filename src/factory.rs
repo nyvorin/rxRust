@@ -1048,6 +1048,38 @@ pub trait ObservableFactory: Context<Inner = ()> {
       concurrent: 1, // Sequential execution
     })
   }
+
+  /// Mirror whichever of many observables emits first.
+  ///
+  /// Subscribes in order; the first to emit an item, error, or completion
+  /// wins and the rest are unsubscribed (or never subscribed). An empty
+  /// iterator completes immediately.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::race_observables([Local::from_iter(vec![1, 2]), Local::from_iter(vec![3])])
+  ///   .subscribe(|v| println!("Got: {}", v));
+  /// // Prints: 1, 2
+  /// ```
+  ///
+  /// # See Also
+  ///
+  /// * [`Observable::race`] - Binary instance method
+  #[doc(alias = "race")]
+  fn race_observables<O, I>(observables: I) -> Self::With<crate::ops::race_all::RaceAll<O>>
+  where
+    O: ObservableType,
+    I: IntoIterator<Item = Self::With<O>>,
+  {
+    let sources = observables
+      .into_iter()
+      .map(Context::into_inner)
+      .collect();
+    Self::lift(crate::ops::race_all::RaceAll { sources })
+  }
 }
 
 // Blanket implementation: Any `Context<Inner = ()>`, reuires `Inner = ()` to
