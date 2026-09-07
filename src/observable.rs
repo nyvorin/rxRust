@@ -56,6 +56,7 @@ use crate::ops::{
   element_at::{ElementAt, ElementAtOr},
   end_with::EndWith,
   every::Every,
+  exhaust_map::ExhaustMap,
   filter::Filter,
   filter_map::FilterMap,
   finalize::Finalize,
@@ -2953,6 +2954,28 @@ pub trait Observable: Context {
     Out: Context<Inner: ObservableType<Err = Self::Err> + 'static>,
   {
     self.transform(|source| SwitchMap { source, func: f })
+  }
+
+  /// Map each item to an inner observable, ignoring items that arrive while
+  /// an inner observable is still active
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter(vec![1, 2])
+  ///   .exhaust_map(|v| Local::of(v * 10))
+  ///   .subscribe(|v| println!("{}", v));
+  /// // Prints: 10, 20
+  /// ```
+  #[doc(alias = "exhaustMap")]
+  fn exhaust_map<F, Out>(self, f: F) -> Self::With<ExhaustMap<Self::Inner, F>>
+  where
+    F: for<'a> FnMut(Self::Item<'a>) -> Out,
+    Out: Context<Inner: ObservableType<Err = Self::Err> + 'static>,
+  {
+    self.transform(|source| ExhaustMap { source, func: f })
   }
 }
 
