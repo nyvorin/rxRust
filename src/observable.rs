@@ -53,6 +53,7 @@ use crate::ops::{
   distinct::{Distinct, DistinctKey},
   distinct_until_changed::{DistinctUntilChanged, DistinctUntilKeyChanged},
   element_at::{ElementAt, ElementAtOr},
+  end_with::EndWith,
   every::Every,
   filter::Filter,
   filter_map::FilterMap,
@@ -1598,6 +1599,26 @@ pub trait Observable: Context {
   /// ```
   fn start_with<Item>(self, values: Vec<Item>) -> Self::With<StartWith<Self::Inner, Item>> {
     self.transform(|source| StartWith { source, values })
+  }
+
+  /// Emit `values` after the source completes, then complete
+  ///
+  /// Mirror of [`Observable::start_with`]. The values are not emitted if the
+  /// source errors.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter([1, 2])
+  ///   .end_with(vec![3])
+  ///   .subscribe(|v| println!("{}", v));
+  /// // Prints: 1, 2, 3
+  /// ```
+  #[doc(alias = "endWith")]
+  fn end_with<Item>(self, values: Vec<Item>) -> Self::With<EndWith<Self::Inner, Item>> {
+    self.transform(|source| EndWith { source, values })
   }
 
   /// Emit a default value if the observable completes without emitting any
