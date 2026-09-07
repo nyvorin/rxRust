@@ -79,6 +79,7 @@ use crate::ops::{
   race::Race,
   reduce::{Reduce, ReduceFn, ReduceInitialFn},
   ref_count::{PublishSubjectOf, RefCount, ShareOf, ShareReplayOf},
+  repeat::Repeat,
   retry::{Retry, RetryPolicy},
   sample::Sample,
   scan::Scan,
@@ -1496,6 +1497,19 @@ pub trait Observable: Context {
     P: RetryPolicy<Self::Err>,
   {
     self.transform(|source| Retry { source, policy })
+  }
+
+  /// Resubscribe to the source on completion, `count` times in total
+  ///
+  /// `repeat(0)` completes immediately and `repeat(1)` is transparent. Each
+  /// resubscription runs on the scheduler's next tick.
+  fn repeat(self, count: usize) -> Self::With<Repeat<Self::Inner>> {
+    self.transform(|source| Repeat { source, count: Some(count) })
+  }
+
+  /// Resubscribe to the source on completion until unsubscribed
+  fn repeat_forever(self) -> Self::With<Repeat<Self::Inner>> {
+    self.transform(|source| Repeat { source, count: None })
   }
 
   /// Throttle emissions by ignoring values during a window
