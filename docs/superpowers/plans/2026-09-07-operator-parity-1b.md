@@ -51,7 +51,7 @@
 - Produces: `BehaviorSubject<P, V>` with `pub subject: Subject<P>`, `pub value: V` where `V: RcDerefMut<Target = Item>`; `BehaviorSubject::new(initial: Item)` for `V: From<Item>`; `Behavior::peek`/`next_by` unchanged in shape.
 - Factories return `Self::With<BehaviorSubject<SubjectPtr<'a, Self, Item, Err>, Self::RcMut<Item>>>`.
 
-- [ ] **Step 1: Write the failing regression test**
+- [x] **Step 1: Write the failing regression test**
 
 Append to the `tests` module in `src/subject/behavior_subject.rs`:
 
@@ -73,7 +73,7 @@ Append to the `tests` module in `src/subject/behavior_subject.rs`:
 Run: `cargo test --lib subject::behavior_subject::tests::test_behavior_subject_value_shared_across_clones`
 Expected: FAIL, left `[0]` right `[5]`.
 
-- [ ] **Step 2: Move the value behind the shared pointer**
+- [x] **Step 2: Move the value behind the shared pointer**
 
 Replace the struct, `Clone`, constructor, `Observer`, `CoreObservable`, and `Behavior` impls in `src/subject/behavior_subject.rs` with:
 
@@ -200,7 +200,7 @@ where
 
 If the existing `ObservableType` impl was written with an `Item: Clone` bound on the struct's first parameter, drop that bound as shown; the item type comes from the inner `Subject`.
 
-- [ ] **Step 3: Update the two factories**
+- [x] **Step 3: Update the two factories**
 
 In `src/factory.rs`, change both `behavior_subject` signatures:
 
@@ -218,12 +218,12 @@ In `src/factory.rs`, change both `behavior_subject` signatures:
   }
 ```
 
-- [ ] **Step 4: Run the subject and cookbook tests**
+- [x] **Step 4: Run the subject and cookbook tests**
 
 Run: `cargo test --lib subject:: && cargo test --doc behavior && cargo test --doc state_store`
 Expected: all pass, including the new regression test.
 
-- [ ] **Step 5: Gate and commit**
+- [x] **Step 5: Gate and commit**
 
 ```bash
 cargo +nightly fmt --all && cargo +nightly clippy --all-targets --all-features -- -D warnings
@@ -242,7 +242,7 @@ git commit -m "fix(subject.behavior): share the current value across clones"
 **Interfaces:**
 - Produces: `pub trait MulticastSubject { fn subscriber_count(&self) -> usize; fn is_empty(&self) -> bool; fn is_terminated(&self) -> bool; }`, `ConnectableObservable<S, Sub>`, `RefCount<S, Sub, ConnPtr>`, `Observable::multicast<'a, Sub>(self, subject: Sub) -> Self::With<ConnectableObservable<Self::Inner, Sub>>`, `Observable::share<'a>(self) -> ShareOf<'a, Self>`.
 
-- [ ] **Step 1: Add the trait**
+- [x] **Step 1: Add the trait**
 
 `src/subject/multicast_subject.rs`:
 
@@ -285,7 +285,7 @@ where
 
 In `src/subject.rs` add `pub mod multicast_subject;` and `pub use multicast_subject::*;`.
 
-- [ ] **Step 2: Generalize `ConnectableObservable`**
+- [x] **Step 2: Generalize `ConnectableObservable`**
 
 In `src/observable/connectable.rs` replace the struct and impls (keep the module docs and tests):
 
@@ -379,7 +379,7 @@ where
 
 Keep the doc comments that were on each item.
 
-- [ ] **Step 3: Generalize `RefCount` and add the `share` aliases**
+- [x] **Step 3: Generalize `RefCount` and add the `share` aliases**
 
 In `src/ops/ref_count.rs` replace the struct and impls (keep tests):
 
@@ -477,7 +477,7 @@ pub type ShareOf<'a, O> = <O as Context>::With<
 >;
 ```
 
-- [ ] **Step 4: Update `src/observable.rs`**
+- [x] **Step 4: Update `src/observable.rs`**
 
 Change the aliases near the end of the file:
 
@@ -526,7 +526,7 @@ Import `PublishSubjectOf` and `ShareOf` from `crate::ops::ref_count` in the ops 
 
 `src/prelude.rs`: add `MulticastSubject` to the `subject::*` export (it is covered by the glob) and confirm `ShareOf` is reachable via `crate::ops::*`.
 
-- [ ] **Step 5: Add a `share` test to `src/ops/ref_count.rs`**
+- [x] **Step 5: Add a `share` test to `src/ops/ref_count.rs`**
 
 ```rust
   #[rxrust_macro::test]
@@ -564,12 +564,12 @@ Import `PublishSubjectOf` and `ShareOf` from `crate::ops::ref_count` in the ops 
 
 If `finalize` runs on unsubscribe only, the count of 1 confirms one source connection; if it does not fire on unsubscribe, drop that assertion and keep the subscriber-count ones.
 
-- [ ] **Step 6: Run everything that touches multicasting**
+- [x] **Step 6: Run everything that touches multicasting**
 
 Run: `cargo test --lib connectable && cargo test --lib ref_count && cargo test --doc multicast && cargo test --doc publish && cargo test --doc share`
 Expected: pass.
 
-- [ ] **Step 7: Gate and commit**
+- [x] **Step 7: Gate and commit**
 
 ```bash
 cargo +nightly fmt --all && cargo +nightly clippy --all-targets --all-features -- -D warnings
@@ -588,7 +588,7 @@ git commit -m "refactor(connectable): generalize multicasting over the subject t
 **Interfaces:**
 - Produces: `ReplaySubject<P, B>` with `B: RcDerefMut<Target = ReplayBuffer<Item, Err>>`; `ReplaySubject::new(capacity: Option<usize>)`; factories `replay_subject(capacity: usize)`, `replay_subject_unbounded()`; `Observable::publish_replay(capacity)`, `Observable::share_replay(capacity)`; alias `ReplaySubjectOf<'a, O>`.
 
-- [ ] **Step 1: Write the subject with tests**
+- [x] **Step 1: Write the subject with tests**
 
 `src/subject/replay_subject.rs`:
 
@@ -886,7 +886,7 @@ where
 
 If the `Observer::is_closed` call does not resolve (ambiguous `Item`/`Err`), add a `pub fn is_terminated(&self) -> bool` inherent method on `ReplaySubject` reading `self.buffer.rc_deref().terminal.is_some()` and call that.
 
-- [ ] **Step 2: Factories and operators**
+- [x] **Step 2: Factories and operators**
 
 `src/factory.rs`, after `behavior_subject_mut_ref`:
 
@@ -961,7 +961,7 @@ pub type ShareReplayOf<'a, O> = <O as Context>::With<
 
 `src/prelude.rs`: `ReplaySubject`, `ReplayBuffer`, `ReplaySubjectOf` are covered by `subject::*`; `ShareReplayOf` by `ops::*`.
 
-- [ ] **Step 3: Add a `share_replay` test to `src/ops/ref_count.rs`**
+- [x] **Step 3: Add a `share_replay` test to `src/ops/ref_count.rs`**
 
 ```rust
   #[rxrust_macro::test]
@@ -985,7 +985,7 @@ pub type ShareReplayOf<'a, O> = <O as Context>::With<
   }
 ```
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run: `cargo test --lib subject::replay_subject && cargo test --lib ref_count && cargo test --doc replay && cargo test --doc share_replay`
 Expected: pass.
@@ -1007,7 +1007,7 @@ git commit -m "feat(subject.replay): add ReplaySubject, publish_replay and share
 **Interfaces:**
 - Produces: `AsyncSubject<P, V>` with `V: RcDerefMut<Target = AsyncState<Item, Err>>`; factory `async_subject()`; `Observable::publish_last()`, `Observable::publish_behavior(initial)`.
 
-- [ ] **Step 1: Write the subject with tests**
+- [x] **Step 1: Write the subject with tests**
 
 `src/subject/async_subject.rs`:
 
@@ -1247,7 +1247,7 @@ mod tests {
 
 Register in `src/subject.rs`; add the `MulticastSubject` impl in `src/subject/multicast_subject.rs`, same shape as the `ReplaySubject` one (delegating `subscriber_count` and reporting `is_terminated` from the state).
 
-- [ ] **Step 2: Factory and operators**
+- [x] **Step 2: Factory and operators**
 
 `src/factory.rs`:
 
@@ -1295,7 +1295,7 @@ pub type BehaviorSubjectOf<'a, O> = BehaviorSubject<
 >;
 ```
 
-- [ ] **Step 3: Test `publish_last` and `publish_behavior` in `src/observable/connectable.rs` tests**
+- [x] **Step 3: Test `publish_last` and `publish_behavior` in `src/observable/connectable.rs` tests**
 
 ```rust
   #[rxrust_macro::test]
@@ -1317,7 +1317,7 @@ pub type BehaviorSubjectOf<'a, O> = BehaviorSubject<
   }
 ```
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run: `cargo test --lib subject::async_subject && cargo test --lib connectable && cargo test --doc async_subject && cargo test --doc publish_last && cargo test --doc publish_behavior`
 Expected: pass.
@@ -1339,7 +1339,7 @@ git commit -m "feat(subject.async): add AsyncSubject, publish_last and publish_b
 **Interfaces:**
 - Produces: `Observable::catch_error<F, Out>(self, handler: F) -> Self::With<CatchError<Self::Inner, F>> where F: FnMut(Self::Err) -> Out, Out: Context<Inner: ObservableType>` with matching item type; output `Err` is the fallback's.
 
-- [ ] **Step 1: Write the operator with tests**
+- [x] **Step 1: Write the operator with tests**
 
 ```rust
 //! CatchError operator implementation
@@ -1532,7 +1532,7 @@ mod tests {
 
 If `Local::throw_err(..).map(|_: ()| 0)` does not type-check because `ThrowErr`'s item type is not `()`, look at `src/observable/trivial.rs` for the item type and adjust the closure annotation.
 
-- [ ] **Step 2: Register and add the trait method**
+- [x] **Step 2: Register and add the trait method**
 
 `src/ops.rs`: `pub mod catch_error;` / `pub use catch_error::*;`.
 
@@ -1566,7 +1566,7 @@ If `Local::throw_err(..).map(|_: ()| 0)` does not type-check because `ThrowErr`'
   }
 ```
 
-- [ ] **Step 3: Run, gate, commit**
+- [x] **Step 3: Run, gate, commit**
 
 Run: `cargo test --lib ops::catch_error && cargo test --doc catch_error`
 
@@ -1587,7 +1587,7 @@ git commit -m "feat(ops.catch_error): add catch_error operator"
 **Interfaces:**
 - Produces: `pub struct TimeoutError;` (Debug, Clone, Copy, PartialEq, Eq, Default, Display, Error); `Timeout<S, Sch, F>`; methods `timeout(duration)`, `timeout_with(duration, scheduler)` requiring `Self::Err: From<TimeoutError>`, `timeout_or_else(duration, f)`, `timeout_or_else_with(duration, f, scheduler)` with `F: FnOnce() -> Self::Err`.
 
-- [ ] **Step 1: Write the operator with tests**
+- [x] **Step 1: Write the operator with tests**
 
 ```rust
 //! Timeout operator implementation
@@ -1903,7 +1903,7 @@ mod tests {
 
 Delete the first placeholder `timeout_fire` definition (the one containing `unreachable!`) before compiling; only the concrete one stays.
 
-- [ ] **Step 2: Register, export, and add the trait methods**
+- [x] **Step 2: Register, export, and add the trait methods**
 
 `src/ops.rs`: `pub mod timeout;` / `pub use timeout::*;`. `src/prelude.rs`: add `timeout::TimeoutError` to the `ops` re-export list.
 
@@ -1957,7 +1957,7 @@ Delete the first placeholder `timeout_fire` definition (the one containing `unre
 
 Import `Timeout`, `TimeoutError`, `default_timeout_error` from `crate::ops::timeout`.
 
-- [ ] **Step 3: Run, gate, commit**
+- [x] **Step 3: Run, gate, commit**
 
 Run: `cargo test --lib ops::timeout && cargo test --doc timeout`
 
@@ -1978,7 +1978,7 @@ git commit -m "feat(ops.timeout): add timeout, timeout_with, timeout_or_else ope
 **Interfaces:**
 - Produces: `Repeat<S>` with `pub count: Option<usize>`; `Observable::repeat(count: usize)`, `Observable::repeat_forever()`. Resubscription happens on the context scheduler's next tick, like `retry`.
 
-- [ ] **Step 1: Write the operator with tests**
+- [x] **Step 1: Write the operator with tests**
 
 ```rust
 //! Repeat operator implementation
@@ -2218,7 +2218,7 @@ mod tests {
 
 If `TestScheduler::advance_by` does not run a task scheduled with `None` delay, use `TestScheduler::flush()` in the forever test between reads; and if `flush` on an unbounded repeat never returns, replace the loop with three `advance_by(Duration::ZERO)` calls and assert `seen >= 2`.
 
-- [ ] **Step 2: Register and add the trait methods**
+- [x] **Step 2: Register and add the trait methods**
 
 `src/ops.rs`: `pub mod repeat;` / `pub use repeat::*;`.
 
@@ -2239,7 +2239,7 @@ If `TestScheduler::advance_by` does not run a task scheduled with `None` delay, 
   }
 ```
 
-- [ ] **Step 3: Run, gate, commit**
+- [x] **Step 3: Run, gate, commit**
 
 Run: `cargo test --lib ops::repeat && cargo test --doc repeat`
 
@@ -2260,7 +2260,7 @@ git commit -m "feat(ops.repeat): add repeat and repeat_forever operators"
 **Interfaces:**
 - Produces: `Observable::exhaust_map<F, Out>(self, f: F) -> Self::With<ExhaustMap<Self::Inner, F>>` with the same bounds as `switch_map`.
 
-- [ ] **Step 1: Write the operator with tests**
+- [x] **Step 1: Write the operator with tests**
 
 ```rust
 //! ExhaustMap operator implementation
@@ -2577,7 +2577,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Register and add the trait method**
+- [x] **Step 2: Register and add the trait method**
 
 `src/ops.rs`: `pub mod exhaust_map;` / `pub use exhaust_map::*;`.
 
@@ -2607,7 +2607,7 @@ mod tests {
   }
 ```
 
-- [ ] **Step 3: Run, gate, commit**
+- [x] **Step 3: Run, gate, commit**
 
 Run: `cargo test --lib ops::exhaust_map && cargo test --doc exhaust_map`
 
@@ -2628,7 +2628,7 @@ git commit -m "feat(ops.exhaust_map): add exhaust_map operator"
 **Interfaces:**
 - Produces: aliases `Audit<S, F> = Throttle<S, ThrottleWhenParam<F>>`, `AuditTime<S, D> = Throttle<S, D>`; methods `audit(selector)`, `audit_time(duration)`, `audit_time_with(duration, scheduler)` built on `throttle` with `ThrottleEdge::trailing()`.
 
-- [ ] **Step 1: Write the alias file with the deciding tests**
+- [x] **Step 1: Write the alias file with the deciding tests**
 
 ```rust
 //! Audit operator implementation
@@ -2723,7 +2723,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Register and add the trait methods**
+- [x] **Step 2: Register and add the trait methods**
 
 `src/ops.rs`: `pub mod audit;` / `pub use audit::*;`.
 
@@ -2767,7 +2767,7 @@ mod tests {
 
 Match `audit_time_with`'s return type to whatever `throttle_time_with` returns in `src/observable.rs:1307`; read that signature and mirror it exactly. If the trailing-edge tests in Step 1 fail on semantics (a leading value is emitted, or the window is not restarted by a fresh item), replace the aliases with a dedicated `Audit` operator modeled on `debounce`'s task-handle pattern: store the latest value, schedule the emit task on the first item of a window, and clear the window when it fires.
 
-- [ ] **Step 3: Run, gate, commit**
+- [x] **Step 3: Run, gate, commit**
 
 Run: `cargo test --lib ops::audit && cargo test --doc audit`
 
@@ -2784,7 +2784,7 @@ git commit -m "feat(ops.audit): add audit, audit_time and audit_time_with operat
 **Files:**
 - Modify: `missing_features.md`, `guide/operators.md`, `CHANGELOG.md`, `tests/v1_integration.rs`, `docs/superpowers/plans/2026-09-07-operator-parity-1b.md`
 
-- [ ] **Step 1: Integration tests**
+- [x] **Step 1: Integration tests**
 
 Append to `tests/v1_integration.rs`:
 
@@ -2819,7 +2819,7 @@ fn test_catch_error_after_throw_if_empty() {
 }
 ```
 
-- [ ] **Step 2: Bookkeeping**
+- [x] **Step 2: Bookkeeping**
 
 `missing_features.md`:
 - Creating: `Repeat` row to `[x]` with sub-bullet `- implemented as repeat(count) / repeat_forever`.
@@ -2836,7 +2836,7 @@ fn test_catch_error_after_throw_if_empty() {
 - In `### ✨ New Features` add `*   **RxJS Parity, Tier 1b**: `ReplaySubject`, `AsyncSubject`, `share`, `share_replay`, `publish_replay`, `publish_behavior`, `publish_last`, `catch_error`, `timeout` family, `repeat`, `repeat_forever`, `exhaust_map`, `audit`, `audit_time`.`
 - In `### 💔 Sorry & Breaking Changes` add `*   **BehaviorSubject**: the current value now lives behind the context's shared pointer so every clone observes the latest value; the type is now `BehaviorSubject<P, V>` instead of `BehaviorSubject<Item, P>`. `ConnectableObservable` and `RefCount` are generic over the subject type; `multicast` accepts any subject.`
 
-- [ ] **Step 3: Full matrix**
+- [x] **Step 3: Full matrix**
 
 ```bash
 cargo test
@@ -2846,7 +2846,7 @@ cargo +nightly fmt --all -- --check
 wasm-pack test --node
 ```
 
-- [ ] **Step 4: Commit, mark the plan complete, push, open the PR**
+- [x] **Step 4: Commit, mark the plan complete, push, open the PR**
 
 ```bash
 git add missing_features.md guide/operators.md CHANGELOG.md tests/v1_integration.rs
