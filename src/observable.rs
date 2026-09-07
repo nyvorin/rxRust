@@ -44,6 +44,7 @@ use crate::ops::{
   buffer::Buffer, // Restored
   buffer_count::BufferCount,
   buffer_time::BufferTime,
+  catch_error::CatchError,
   collect::Collect,
   combine_latest::CombineLatest,
   contains::Contains,
@@ -1195,6 +1196,32 @@ pub trait Observable: Context {
     F: FnOnce(Self::Err) -> OutErr,
   {
     self.transform(|source| MapErr { source, func: f })
+  }
+
+  /// Recover from an error by continuing with the observable returned by
+  /// `handler`
+  ///
+  /// The fallback's items must match; its error type becomes the output
+  /// error type.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::throw_err("boom".to_string())
+  ///   .map(|_| 0)
+  ///   .catch_error(|_: String| Local::of(-1))
+  ///   .subscribe(|v| println!("{}", v));
+  /// // Prints: -1
+  /// ```
+  #[doc(alias = "catchError")]
+  fn catch_error<F, Out>(self, handler: F) -> Self::With<CatchError<Self::Inner, F>>
+  where
+    F: FnMut(Self::Err) -> Out,
+    Out: Context<Inner: ObservableType>,
+  {
+    self.transform(|source| CatchError { source, handler })
   }
 
   /// Execute a callback when the stream completes
