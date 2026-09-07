@@ -83,6 +83,7 @@ pub mod take_until;
 pub mod take_while;
 pub mod tap;
 pub mod throttle;
+pub mod throw_if_empty;
 pub mod with_latest_from;
 pub mod zip;
 
@@ -141,6 +142,7 @@ pub use take_until::*;
 pub use take_while::*;
 pub use tap::*;
 pub use throttle::*;
+pub use throw_if_empty::*;
 pub use with_latest_from::*;
 pub use zip::*;
 

@@ -92,6 +92,7 @@ use crate::ops::{
   take_while::TakeWhile,
   tap::Tap,
   throttle::{Throttle, ThrottleEdge, ThrottleWhenParam},
+  throw_if_empty::ThrowIfEmpty,
   with_latest_from::WithLatestFrom,
   zip::Zip,
 };
@@ -1647,6 +1648,28 @@ pub trait Observable: Context {
     self, default_value: Self::Item<'a>,
   ) -> Self::With<DefaultIfEmpty<Self::Inner, Self::Item<'a>>> {
     self.transform(|source| DefaultIfEmpty::new(source, default_value))
+  }
+
+  /// Error with `error_fn()` instead of completing when the source is empty
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter(std::iter::empty::<i32>())
+  ///   .map_err(|_: std::convert::Infallible| String::new())
+  ///   .throw_if_empty(|| "nothing".to_string())
+  ///   .on_error(|e| println!("{}", e))
+  ///   .subscribe(|_| {});
+  /// // Prints: nothing
+  /// ```
+  #[doc(alias = "throwIfEmpty")]
+  fn throw_if_empty<F>(self, error_fn: F) -> Self::With<ThrowIfEmpty<Self::Inner, F>>
+  where
+    F: FnOnce() -> Self::Err,
+  {
+    self.transform(|source| ThrowIfEmpty { source, error_fn })
   }
 
   /// Collect all emitted items into a collection
