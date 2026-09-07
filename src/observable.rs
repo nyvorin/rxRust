@@ -57,6 +57,7 @@ use crate::ops::{
   filter::Filter,
   filter_map::FilterMap,
   finalize::Finalize,
+  find::{Find, FindIndex},
   flat_map::FlatMap,
   group_by::GroupBy,
   ignore_elements::IgnoreElements,
@@ -550,6 +551,45 @@ pub trait Observable: Context {
     self.transform(|source| {
       DefaultIfEmpty::new(Take { source: Skip { source, count: index }, count: 1 }, default_value)
     })
+  }
+
+  /// Emit the first item that satisfies `predicate`, then complete
+  ///
+  /// Completes without emitting when nothing matches.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let observable = Local::from_iter([1, 4, 6]).find(|v| v % 2 == 0);
+  /// // Emits: 4
+  /// ```
+  fn find<F>(self, predicate: F) -> Self::With<Find<Self::Inner, F>>
+  where
+    F: for<'a> FnMut(&Self::Item<'a>) -> bool,
+  {
+    self.transform(|source| Take { source: Filter { source, filter: predicate }, count: 1 })
+  }
+
+  /// Emit the zero-based index of the first item that satisfies `predicate`
+  ///
+  /// Completes without emitting when nothing matches.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let observable = Local::from_iter([1, 4, 6]).find_index(|v| v % 2 == 0);
+  /// // Emits: 1
+  /// ```
+  #[doc(alias = "findIndex")]
+  fn find_index<F>(self, predicate: F) -> Self::With<FindIndex<Self::Inner, F>>
+  where
+    F: for<'a> FnMut(&Self::Item<'a>) -> bool,
+  {
+    self.transform(|source| FindIndex { source, predicate })
   }
 
   /// Skip the first `count` values from the source observable
