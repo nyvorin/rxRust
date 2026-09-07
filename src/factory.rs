@@ -105,7 +105,7 @@ use crate::{
   observable::{defer::Defer, *},
   observer::Emitter,
   scheduler::{Duration, Instant},
-  subject::{BehaviorSubject, Subject, SubjectPtr, SubjectPtrMutRef},
+  subject::{BehaviorSubject, ReplayBuffer, ReplaySubject, Subject, SubjectPtr, SubjectPtrMutRef},
   subscription::Subscription,
 };
 
@@ -352,6 +352,38 @@ pub trait ObservableFactory: Context<Inner = ()> {
     initial: Item,
   ) -> Self::With<BehaviorSubject<SubjectPtrMutRef<'a, Self, Item, Err>, Self::RcMut<Item>>> {
     Self::lift(BehaviorSubject::new(initial))
+  }
+
+  /// Creates a `ReplaySubject` that replays the last `capacity` items and any
+  /// terminal event to late subscribers.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use std::convert::Infallible;
+  ///
+  /// use rxrust::prelude::*;
+  ///
+  /// let mut subject = Local::replay_subject::<i32, Infallible>(1);
+  /// subject.next(1);
+  /// subject.next(2);
+  /// subject.clone().subscribe(|v| assert_eq!(v, 2));
+  /// ```
+  #[allow(clippy::type_complexity)]
+  fn replay_subject<'a, Item: Clone, Err: Clone>(
+    capacity: usize,
+  ) -> Self::With<
+    ReplaySubject<SubjectPtr<'a, Self, Item, Err>, Self::RcMut<ReplayBuffer<Item, Err>>>,
+  > {
+    Self::lift(ReplaySubject::new(Some(capacity)))
+  }
+
+  /// Creates a `ReplaySubject` that replays every item to late subscribers.
+  #[allow(clippy::type_complexity)]
+  fn replay_subject_unbounded<'a, Item: Clone, Err: Clone>() -> Self::With<
+    ReplaySubject<SubjectPtr<'a, Self, Item, Err>, Self::RcMut<ReplayBuffer<Item, Err>>>,
+  > {
+    Self::lift(ReplaySubject::new(None))
   }
 
   /// Creates an observable from an iterator that emits each item synchronously

@@ -16,7 +16,7 @@
 use crate::{
   context::{Context, RcDerefMut},
   observable::{CoreObservable, Observable, ObservableType, connectable::ConnectableObservable},
-  subject::{MulticastSubject, Subject, SubjectPtr},
+  subject::{MulticastSubject, ReplaySubjectOf, Subject, SubjectPtr},
   subscription::Subscription,
 };
 
@@ -112,6 +112,21 @@ pub type ShareOf<'a, O> =
       >,
     >,
   >;
+
+/// Return type of [`Observable::share_replay`].
+pub type ShareReplayOf<'a, O> = <O as Context>::With<
+  RefCount<
+    <O as Context>::Inner,
+    ReplaySubjectOf<'a, O>,
+    <O as Context>::RcMut<
+      Option<
+        <<O as Context>::Inner as CoreObservable<
+          <O as Context>::With<ReplaySubjectOf<'a, O>>,
+        >>::Unsub,
+      >,
+    >,
+  >,
+>;
 
 #[cfg(test)]
 mod tests {
@@ -212,5 +227,27 @@ mod tests {
     assert_eq!(source.inner.subscriber_count(), 1);
     sub_b.unsubscribe();
     assert_eq!(source.inner.subscriber_count(), 0);
+  }
+
+  #[rxrust_macro::test]
+  fn test_share_replay_late_subscriber_gets_buffer_and_completion() {
+    let shared = Local::from_iter(vec![1, 2, 3]).share_replay(2);
+
+    let first = Rc::new(RefCell::new(Vec::new()));
+    let first_c = first.clone();
+    shared
+      .clone()
+      .subscribe(move |v| first_c.borrow_mut().push(v));
+    assert_eq!(*first.borrow(), vec![1, 2, 3]);
+
+    let late = Rc::new(RefCell::new(Vec::new()));
+    let completed = Rc::new(RefCell::new(false));
+    let late_c = late.clone();
+    let completed_c = completed.clone();
+    shared
+      .on_complete(move || *completed_c.borrow_mut() = true)
+      .subscribe(move |v| late_c.borrow_mut().push(v));
+    assert_eq!(*late.borrow(), vec![2, 3]);
+    assert!(*completed.borrow());
   }
 }

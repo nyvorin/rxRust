@@ -77,7 +77,7 @@ use crate::ops::{
   pairwise::Pairwise,
   race::Race,
   reduce::{Reduce, ReduceFn, ReduceInitialFn},
-  ref_count::{PublishSubjectOf, RefCount, ShareOf},
+  ref_count::{PublishSubjectOf, RefCount, ShareOf, ShareReplayOf},
   retry::{Retry, RetryPolicy},
   sample::Sample,
   scan::Scan,
@@ -104,7 +104,7 @@ use crate::ops::{
 use crate::{
   observer::FnMutObserver,
   scheduler::{Duration, Instant},
-  subject::{Subject, SubjectPtr, SubjectPtrMutRef},
+  subject::{ReplaySubjectOf, Subject, SubjectPtr, SubjectPtrMutRef},
   subscription::Subscription,
 };
 
@@ -2151,6 +2151,50 @@ pub trait Observable: Context {
   /// ```
   fn publish<'a>(self) -> ConnectableObservableCtx<'a, Self> {
     self.multicast(PublishSubjectOf::<'a, Self>::default())
+  }
+
+  /// Multicast through a `ReplaySubject` holding the last `capacity` items
+  ///
+  /// Late subscribers receive the buffered items (and any terminal event)
+  /// before live ones. Call `connect()` or use [`Observable::share_replay`].
+  #[doc(alias = "publishReplay")]
+  fn publish_replay<'a>(
+    self, capacity: usize,
+  ) -> Self::With<ConnectableObservable<Self::Inner, ReplaySubjectOf<'a, Self>>> {
+    self.multicast(ReplaySubjectOf::<'a, Self>::new(Some(capacity)))
+  }
+
+  /// `publish_replay(capacity)` with reference counting
+  ///
+  /// The source is connected while at least one subscriber is present, late
+  /// subscribers see the last `capacity` items, and once the source
+  /// terminates late subscribers receive the buffer and the terminal event
+  /// without reconnecting.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let shared = Local::from_iter(vec![1, 2, 3]).share_replay(2);
+  /// shared
+  ///   .clone()
+  ///   .subscribe(|v| println!("first: {}", v));
+  /// shared.subscribe(|v| println!("late: {}", v)); // late: 2, late: 3
+  /// ```
+  #[doc(alias = "shareReplay")]
+  fn share_replay<'a>(self, capacity: usize) -> ShareReplayOf<'a, Self>
+  where
+    Self::Inner: CoreObservable<Self::With<ReplaySubjectOf<'a, Self>>>,
+  {
+    let connection = Self::RcMut::from(None);
+    self.transform(|source| RefCount {
+      connectable: ConnectableObservable {
+        source,
+        subject: ReplaySubjectOf::<'a, Self>::new(Some(capacity)),
+      },
+      connection,
+    })
   }
 
   /// Multicast through a plain `Subject`, connecting the source when the

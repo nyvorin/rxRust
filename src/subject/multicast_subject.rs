@@ -1,6 +1,11 @@
 //! Subscriber-count access for any subject usable in multicasting.
 
-use super::{behavior_subject::BehaviorSubject, subject_core::Subject, subscribers::Subscribers};
+use super::{
+  behavior_subject::BehaviorSubject,
+  replay_subject::{ReplayBuffer, ReplaySubject},
+  subject_core::Subject,
+  subscribers::Subscribers,
+};
 use crate::context::RcDeref;
 
 /// A subject that can back `ConnectableObservable` and `RefCount`.
@@ -34,4 +39,14 @@ where
   Subject<P>: MulticastSubject,
 {
   fn subscriber_count(&self) -> usize { self.subject.subscriber_count() }
+}
+
+impl<P, B, Item, Err> MulticastSubject for ReplaySubject<P, B>
+where
+  Subject<P>: MulticastSubject,
+  B: RcDeref<Target = ReplayBuffer<Item, Err>>,
+{
+  fn subscriber_count(&self) -> usize { self.subject.subscriber_count() }
+
+  fn is_terminated(&self) -> bool { ReplaySubject::is_terminated(self) }
 }
