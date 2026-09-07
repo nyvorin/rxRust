@@ -178,49 +178,28 @@ mod tests {
 
   #[rxrust_macro::test(local)]
   async fn test_interval_basic() {
-    let values = Arc::new(Mutex::new(Vec::new()));
-    let values_c = values.clone();
+    // Deterministic: complete after exactly five ticks instead of asserting
+    // on how many ticks fit inside a wall-clock window.
+    let result = Local::interval(Duration::from_millis(10))
+      .take(5)
+      .collect::<Vec<usize>>()
+      .into_future()
+      .await;
 
-    let handle = Local::interval(Duration::from_millis(10)).subscribe(move |v| {
-      values_c.lock().unwrap().push(v);
-    });
-
-    let unsubscribe_task = create_unsubscribe_task(handle);
-    let _scheduled_task =
-      LocalScheduler.schedule(unsubscribe_task, Some(Duration::from_millis(65)));
-    _scheduled_task.await;
-
-    let result = values.lock().unwrap().clone();
-    // Should have received at least 5 values (0, 1, 2, 3, 4)
-    assert!(result.len() >= 5, "Expected at least 5 values, got {}", result.len());
-    // Verify sequential ordering
-    for (i, &val) in result.iter().enumerate() {
-      assert_eq!(val, i, "Value at position {} should be {}", i, i);
-    }
+    assert_eq!(result, Ok(Ok(vec![0, 1, 2, 3, 4])));
   }
 
   #[rxrust_macro::test]
   async fn test_interval_shared() {
-    let values = Arc::new(Mutex::new(Vec::new()));
-    let values_c = values.clone();
+    // Deterministic: complete after exactly five ticks instead of asserting
+    // on how many ticks fit inside a wall-clock window.
+    let result = Shared::interval(Duration::from_millis(10))
+      .take(5)
+      .collect::<Vec<usize>>()
+      .into_future()
+      .await;
 
-    let handle = Shared::interval(Duration::from_millis(10)).subscribe(move |v| {
-      values_c.lock().unwrap().push(v);
-    });
-
-    let unsubscribe_task = create_unsubscribe_task(handle);
-    let _scheduled_task =
-      SharedScheduler.schedule(unsubscribe_task, Some(Duration::from_millis(65)));
-
-    _scheduled_task.await;
-
-    let result = values.lock().unwrap().clone();
-    // Should have received at least 5 values
-    assert!(result.len() >= 5, "Expected at least 5 values, got {}", result.len());
-    // Verify sequential ordering
-    for (i, &val) in result.iter().enumerate() {
-      assert_eq!(val, i, "Shared interval value at position {} should be {}", i, i);
-    }
+    assert_eq!(result, Ok(Ok(vec![0, 1, 2, 3, 4])));
   }
 
   #[rxrust_macro::test(local)]
