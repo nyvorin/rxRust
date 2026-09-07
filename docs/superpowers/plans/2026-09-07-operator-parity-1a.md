@@ -59,7 +59,7 @@ Shared shape used by Tasks 12 through 14 (N-ary with owned items): the op holds 
 **Interfaces:**
 - Produces: `Observable::every<F>(self, predicate: F) -> Self::With<Every<Self::Inner, F>> where F: for<'a> FnMut(&Self::Item<'a>) -> bool`, emitting one `bool`.
 
-- [ ] **Step 1: Write the operator file with failing tests**
+- [x] **Step 1: Write the operator file with failing tests**
 
 ```rust
 //! Every operator implementation
@@ -260,7 +260,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Register the module and add the trait method**
+- [x] **Step 2: Register the module and add the trait method**
 
 In `src/ops.rs`, add `pub mod every;` to the module list and `pub use every::*;` to the re-exports, keeping alphabetical order.
 
@@ -292,12 +292,12 @@ In `src/observable.rs`, directly after the `contains` method, add:
 
 Check that `Every` is in scope at the top of `src/observable.rs`; the file imports operators via `use crate::ops::*;` or an explicit list. If explicit, add `Every` to that list.
 
-- [ ] **Step 3: Run the tests**
+- [x] **Step 3: Run the tests**
 
 Run: `cargo test --lib ops::every && cargo test --doc every`
 Expected: 5 unit tests pass, doctests pass.
 
-- [ ] **Step 4: Gate and commit**
+- [x] **Step 4: Gate and commit**
 
 ```bash
 cargo +nightly fmt --all && cargo +nightly clippy --all-targets --all-features -- -D warnings
@@ -316,7 +316,7 @@ git commit -m "feat(ops.every): add every operator"
 **Interfaces:**
 - Produces: `Observable::ignore_elements(self) -> Self::With<IgnoreElements<Self::Inner>>`, same `Item` and `Err` as the source.
 
-- [ ] **Step 1: Write the operator file with tests**
+- [x] **Step 1: Write the operator file with tests**
 
 ```rust
 //! IgnoreElements operator implementation
@@ -435,7 +435,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Register and add the trait method**
+- [x] **Step 2: Register and add the trait method**
 
 `src/ops.rs`: add `pub mod ignore_elements;` and `pub use ignore_elements::*;`.
 
@@ -459,12 +459,12 @@ mod tests {
   }
 ```
 
-- [ ] **Step 3: Run the tests**
+- [x] **Step 3: Run the tests**
 
 Run: `cargo test --lib ops::ignore_elements && cargo test --doc ignore_elements`
 Expected: pass.
 
-- [ ] **Step 4: Gate and commit**
+- [x] **Step 4: Gate and commit**
 
 ```bash
 cargo +nightly fmt --all && cargo +nightly clippy --all-targets --all-features -- -D warnings
@@ -483,7 +483,7 @@ git commit -m "feat(ops.ignore_elements): add ignore_elements operator"
 **Interfaces:**
 - Produces: `Observable::is_empty(self) -> Self::With<IsEmpty<Self::Inner>>`, emitting one `bool`.
 
-- [ ] **Step 1: Write the operator file with tests**
+- [x] **Step 1: Write the operator file with tests**
 
 ```rust
 //! IsEmpty operator implementation
@@ -632,7 +632,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Register and add the trait method**
+- [x] **Step 2: Register and add the trait method**
 
 `src/ops.rs`: add `pub mod is_empty;` and `pub use is_empty::*;`.
 
@@ -657,12 +657,12 @@ mod tests {
   }
 ```
 
-- [ ] **Step 3: Run the tests**
+- [x] **Step 3: Run the tests**
 
 Run: `cargo test --lib ops::is_empty && cargo test --doc is_empty`
 Expected: pass.
 
-- [ ] **Step 4: Gate and commit**
+- [x] **Step 4: Gate and commit**
 
 ```bash
 cargo +nightly fmt --all && cargo +nightly clippy --all-targets --all-features -- -D warnings
@@ -682,7 +682,7 @@ git commit -m "feat(ops.is_empty): add is_empty operator"
 - Consumes: `Skip { source, count }`, `Take { source, count }`, `DefaultIfEmpty::new(source, default_value)` (all existing).
 - Produces: `Observable::element_at(self, index: usize) -> Self::With<ElementAt<Self::Inner>>` and `Observable::element_at_or<'a>(self, index: usize, default_value: Self::Item<'a>) -> Self::With<ElementAtOr<Self::Inner, Self::Item<'a>>>`.
 
-- [ ] **Step 1: Write the alias file with tests**
+- [x] **Step 1: Write the alias file with tests**
 
 ```rust
 //! ElementAt operator implementation
@@ -777,7 +777,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Register and add the trait methods**
+- [x] **Step 2: Register and add the trait methods**
 
 `src/ops.rs`: add `pub mod element_at;` and `pub use element_at::*;`.
 
@@ -821,12 +821,12 @@ mod tests {
   }
 ```
 
-- [ ] **Step 3: Run the tests**
+- [x] **Step 3: Run the tests**
 
 Run: `cargo test --lib ops::element_at && cargo test --doc element_at`
 Expected: pass.
 
-- [ ] **Step 4: Gate and commit**
+- [x] **Step 4: Gate and commit**
 
 ```bash
 cargo +nightly fmt --all && cargo +nightly clippy --all-targets --all-features -- -D warnings
@@ -846,7 +846,7 @@ git commit -m "feat(ops.element_at): add element_at and element_at_or operators"
 - Consumes: `Filter { source, filter }`, `Take { source, count }` (existing).
 - Produces: `Observable::find<F>(self, predicate: F) -> Self::With<Find<Self::Inner, F>>` and `Observable::find_index<F>(self, predicate: F) -> Self::With<FindIndex<Self::Inner, F>>` (emits `usize`), both with `F: for<'a> FnMut(&Self::Item<'a>) -> bool`.
 
-- [ ] **Step 1: Write the operator file with tests**
+- [x] **Step 1: Write the operator file with tests**
 
 ```rust
 //! Find operators implementation
@@ -1051,7 +1051,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Register and add the trait methods**
+- [x] **Step 2: Register and add the trait methods**
 
 `src/ops.rs`: add `pub mod find;` and `pub use find::*;`.
 
@@ -1098,12 +1098,12 @@ mod tests {
   }
 ```
 
-- [ ] **Step 3: Run the tests**
+- [x] **Step 3: Run the tests**
 
 Run: `cargo test --lib ops::find && cargo test --doc find`
 Expected: pass.
 
-- [ ] **Step 4: Gate and commit**
+- [x] **Step 4: Gate and commit**
 
 ```bash
 cargo +nightly fmt --all && cargo +nightly clippy --all-targets --all-features -- -D warnings
@@ -1122,7 +1122,7 @@ git commit -m "feat(ops.find): add find and find_index operators"
 **Interfaces:**
 - Produces: `Observable::end_with<Item>(self, values: Vec<Item>) -> Self::With<EndWith<Self::Inner, Item>>`.
 
-- [ ] **Step 1: Write the operator file with tests**
+- [x] **Step 1: Write the operator file with tests**
 
 ```rust
 //! EndWith operator implementation
@@ -1273,7 +1273,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Register and add the trait method**
+- [x] **Step 2: Register and add the trait method**
 
 `src/ops.rs`: add `pub mod end_with;` and `pub use end_with::*;`.
 
@@ -1301,12 +1301,12 @@ mod tests {
   }
 ```
 
-- [ ] **Step 3: Run the tests**
+- [x] **Step 3: Run the tests**
 
 Run: `cargo test --lib ops::end_with && cargo test --doc end_with`
 Expected: pass.
 
-- [ ] **Step 4: Gate and commit**
+- [x] **Step 4: Gate and commit**
 
 ```bash
 cargo +nightly fmt --all && cargo +nightly clippy --all-targets --all-features -- -D warnings
@@ -1325,7 +1325,7 @@ git commit -m "feat(ops.end_with): add end_with operator"
 **Interfaces:**
 - Produces: `Observable::throw_if_empty<F>(self, error_fn: F) -> Self::With<ThrowIfEmpty<Self::Inner, F>> where F: FnOnce() -> Self::Err`.
 
-- [ ] **Step 1: Write the operator file with tests**
+- [x] **Step 1: Write the operator file with tests**
 
 ```rust
 //! ThrowIfEmpty operator implementation
@@ -1479,7 +1479,7 @@ mod tests {
 
 If `map_err` does not accept a closure over `Infallible` the way the tests assume, replace `.map_err(|_: Infallible| String::new())` with `Local::create::<i32, String, _, _>(|_| {})` style construction; check `src/ops/map_err.rs` for its exact bound first.
 
-- [ ] **Step 2: Register and add the trait method**
+- [x] **Step 2: Register and add the trait method**
 
 `src/ops.rs`: add `pub mod throw_if_empty;` and `pub use throw_if_empty::*;`.
 
@@ -1509,12 +1509,12 @@ If `map_err` does not accept a closure over `Infallible` the way the tests assum
   }
 ```
 
-- [ ] **Step 3: Run the tests**
+- [x] **Step 3: Run the tests**
 
 Run: `cargo test --lib ops::throw_if_empty && cargo test --doc throw_if_empty`
 Expected: pass.
 
-- [ ] **Step 4: Gate and commit**
+- [x] **Step 4: Gate and commit**
 
 ```bash
 cargo +nightly fmt --all && cargo +nightly clippy --all-targets --all-features -- -D warnings
@@ -1533,7 +1533,7 @@ git commit -m "feat(ops.throw_if_empty): add throw_if_empty operator"
 **Interfaces:**
 - Produces: `pub enum Notification<Item, Err> { Next(Item), Error(Err), Complete }`; `Observable::materialize(self) -> Self::With<Materialize<Self::Inner>>` (Item `Notification<Item, Err>`, Err `Infallible`); `Observable::dematerialize<Item, Err>(self) -> Self::With<Dematerialize<Self::Inner, Item, Err>>` requiring `Self: Observable<Err = Infallible>` and `for<'a> Self::Item<'a>: Into<Notification<Item, Err>>`.
 
-- [ ] **Step 1: Write the operator file with tests**
+- [x] **Step 1: Write the operator file with tests**
 
 ```rust
 //! Materialize and Dematerialize operator implementations
@@ -1831,7 +1831,7 @@ mod tests {
 
 If type inference for `dematerialize()` fails in the tests, write `dematerialize::<i32, String>()` and keep the turbofish in the doctest as well; do not change the operator's signature.
 
-- [ ] **Step 2: Register, export, and add the trait methods**
+- [x] **Step 2: Register, export, and add the trait methods**
 
 `src/ops.rs`: add `pub mod materialize;` and `pub use materialize::*;`.
 
@@ -1880,12 +1880,12 @@ If type inference for `dematerialize()` fails in the tests, write `dematerialize
   }
 ```
 
-- [ ] **Step 3: Run the tests**
+- [x] **Step 3: Run the tests**
 
 Run: `cargo test --lib ops::materialize && cargo test --doc materialize && cargo test --doc dematerialize`
 Expected: pass.
 
-- [ ] **Step 4: Gate and commit**
+- [x] **Step 4: Gate and commit**
 
 ```bash
 cargo +nightly fmt --all && cargo +nightly clippy --all-targets --all-features -- -D warnings
@@ -1904,7 +1904,7 @@ git commit -m "feat(ops.materialize): add materialize and dematerialize operator
 **Interfaces:**
 - Produces: `pub struct Timestamped<T> { pub value: T, pub timestamp: Instant }`, `pub struct Elapsed<T> { pub value: T, pub interval: Duration }`; `Observable::timestamp(self) -> Self::With<Timestamp<Self::Inner>>`; `Observable::time_interval(self) -> Self::With<TimeInterval<Self::Inner>>`.
 
-- [ ] **Step 1: Write `src/ops/timestamp.rs`**
+- [x] **Step 1: Write `src/ops/timestamp.rs`**
 
 ```rust
 //! Timestamp operator implementation
@@ -2032,7 +2032,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Write `src/ops/time_interval.rs`**
+- [x] **Step 2: Write `src/ops/time_interval.rs`**
 
 ```rust
 //! TimeInterval operator implementation
@@ -2171,7 +2171,7 @@ mod tests {
 
 If `Local::timer` emits a type other than `()` and `into_future` returns a different nesting of `Result`, adjust the unwraps to match `IntoFutureResult<T, E>` defined in `src/ops/into_future.rs` (it is `Result<Result<T, E>, IntoFutureError>`).
 
-- [ ] **Step 3: Register, export, and add the trait methods**
+- [x] **Step 3: Register, export, and add the trait methods**
 
 `src/ops.rs`: add `pub mod time_interval;`, `pub mod timestamp;` and the matching `pub use` lines.
 
@@ -2214,12 +2214,12 @@ If `Local::timer` emits a type other than `()` and `into_future` returns a diffe
   }
 ```
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run: `cargo test --lib ops::timestamp && cargo test --lib ops::time_interval && cargo test --doc timestamp && cargo test --doc time_interval`
 Expected: pass.
 
-- [ ] **Step 5: Gate and commit**
+- [x] **Step 5: Gate and commit**
 
 ```bash
 cargo +nightly fmt --all && cargo +nightly clippy --all-targets --all-features -- -D warnings
@@ -2239,7 +2239,7 @@ git commit -m "feat(ops.timestamp): add timestamp and time_interval operators"
 - Consumes: `TupleSubscription::new`, `IntoBoxedSubscription::into_boxed`, `RcDeref`/`RcDerefMut` (existing).
 - Produces: `Observable::race<'a, S2>(self, other: S2) -> Self::With<Race<Self::Inner, S2::Inner>>` with the same bounds as `merge`.
 
-- [ ] **Step 1: Write the operator file with tests**
+- [x] **Step 1: Write the operator file with tests**
 
 ```rust
 //! Race operator implementation
@@ -2528,7 +2528,7 @@ mod tests {
 
 If `Local::empty().map_to(0)` does not unify item types with `Local::of(1)`, use `Local::from_iter(std::iter::empty::<i32>())` instead.
 
-- [ ] **Step 2: Register and add the trait method**
+- [x] **Step 2: Register and add the trait method**
 
 `src/ops.rs`: add `pub mod race;` and `pub use race::*;`.
 
@@ -2560,12 +2560,12 @@ If `Local::empty().map_to(0)` does not unify item types with `Local::of(1)`, use
   }
 ```
 
-- [ ] **Step 3: Run the tests**
+- [x] **Step 3: Run the tests**
 
 Run: `cargo test --lib ops::race:: && cargo test --doc race`
 Expected: pass.
 
-- [ ] **Step 4: Gate and commit**
+- [x] **Step 4: Gate and commit**
 
 ```bash
 cargo +nightly fmt --all && cargo +nightly clippy --all-targets --all-features -- -D warnings
@@ -2585,7 +2585,7 @@ git commit -m "feat(ops.race): add binary race operator"
 - Consumes: `DynamicSubscriptions` (`reserve_id`, `insert`, `remove`, `unsubscribe_all`), `SourceWithDynamicSubs::new`, `IntoBoxedSubscription`.
 - Produces: `ObservableFactory::race_observables<O, I>(observables: I) -> Self::With<RaceAll<O>> where O: ObservableType, I: IntoIterator<Item = Self::With<O>>`.
 
-- [ ] **Step 1: Write the operator file with tests**
+- [x] **Step 1: Write the operator file with tests**
 
 ```rust
 //! RaceAll operator implementation
@@ -2846,7 +2846,7 @@ mod tests {
 
 If `Vec::<Local<Of<i32>>>::new()` does not name the type correctly, use `Local::race_observables(std::iter::empty::<Local<Of<i32>>>())`; `Of` is exported from the prelude.
 
-- [ ] **Step 2: Register and add the factory method**
+- [x] **Step 2: Register and add the factory method**
 
 `src/ops.rs`: add `pub mod race_all;` and `pub use race_all::*;`.
 
@@ -2888,12 +2888,12 @@ If `Vec::<Local<Of<i32>>>::new()` does not name the type correctly, use `Local::
 
 Check the `use` block at the top of `src/factory.rs` includes `Context` (it must, since `Self::lift` is a `Context` method); if `Context::into_inner` cannot be used as a path, write `.map(|o| o.into_inner())`.
 
-- [ ] **Step 3: Run the tests**
+- [x] **Step 3: Run the tests**
 
 Run: `cargo test --lib ops::race_all && cargo test --doc race_observables`
 Expected: pass.
 
-- [ ] **Step 4: Gate and commit**
+- [x] **Step 4: Gate and commit**
 
 ```bash
 cargo +nightly fmt --all && cargo +nightly clippy --all-targets --all-features -- -D warnings
@@ -2912,7 +2912,7 @@ git commit -m "feat(factory.race_observables): add N-ary race factory"
 **Interfaces:**
 - Produces: `ObservableFactory::fork_join_observables<O, I>(observables: I) -> Self::With<ForkJoin<O>>`, emitting one `Vec<Item>`.
 
-- [ ] **Step 1: Write the operator file with tests**
+- [x] **Step 1: Write the operator file with tests**
 
 ```rust
 //! ForkJoin operator implementation
@@ -3202,7 +3202,7 @@ mod tests {
 
 If `a.clone().complete()` on a subject clone is not how the crate completes a subject while keeping a handle, look at how `src/subject/subject_core.rs` tests call `complete` and mirror that.
 
-- [ ] **Step 2: Register and add the factory method**
+- [x] **Step 2: Register and add the factory method**
 
 `src/ops.rs`: add `pub mod fork_join;` and `pub use fork_join::*;`.
 
@@ -3238,12 +3238,12 @@ If `a.clone().complete()` on a subject clone is not how the crate completes a su
   }
 ```
 
-- [ ] **Step 3: Run the tests**
+- [x] **Step 3: Run the tests**
 
 Run: `cargo test --lib ops::fork_join && cargo test --doc fork_join`
 Expected: pass.
 
-- [ ] **Step 4: Gate and commit**
+- [x] **Step 4: Gate and commit**
 
 ```bash
 cargo +nightly fmt --all && cargo +nightly clippy --all-targets --all-features -- -D warnings
@@ -3262,7 +3262,7 @@ git commit -m "feat(factory.fork_join_observables): add N-ary fork_join factory"
 **Interfaces:**
 - Produces: `ObservableFactory::combine_latest_observables<O, I>(observables: I) -> Self::With<CombineLatestAll<O>>`, emitting `Vec<Item>` snapshots; items must be `Clone`.
 
-- [ ] **Step 1: Write the operator file with tests**
+- [x] **Step 1: Write the operator file with tests**
 
 ```rust
 //! CombineLatestAll operator implementation
@@ -3543,7 +3543,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Register and add the factory method**
+- [x] **Step 2: Register and add the factory method**
 
 `src/ops.rs`: add `pub mod combine_latest_all;` and `pub use combine_latest_all::*;`.
 
@@ -3586,12 +3586,12 @@ mod tests {
   }
 ```
 
-- [ ] **Step 3: Run the tests**
+- [x] **Step 3: Run the tests**
 
 Run: `cargo test --lib ops::combine_latest_all && cargo test --doc combine_latest_observables`
 Expected: pass.
 
-- [ ] **Step 4: Gate and commit**
+- [x] **Step 4: Gate and commit**
 
 ```bash
 cargo +nightly fmt --all && cargo +nightly clippy --all-targets --all-features -- -D warnings
@@ -3610,7 +3610,7 @@ git commit -m "feat(factory.combine_latest_observables): add N-ary combine_lates
 **Interfaces:**
 - Produces: `ObservableFactory::zip_observables<O, I>(observables: I) -> Self::With<ZipAll<O>>`, emitting `Vec<Item>` rows.
 
-- [ ] **Step 1: Write the operator file with tests**
+- [x] **Step 1: Write the operator file with tests**
 
 ```rust
 //! ZipAll operator implementation
@@ -3916,7 +3916,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Register and add the factory method**
+- [x] **Step 2: Register and add the factory method**
 
 `src/ops.rs`: add `pub mod zip_all;` and `pub use zip_all::*;`.
 
@@ -3956,12 +3956,12 @@ mod tests {
   }
 ```
 
-- [ ] **Step 3: Run the tests**
+- [x] **Step 3: Run the tests**
 
 Run: `cargo test --lib ops::zip_all && cargo test --doc zip_observables`
 Expected: pass.
 
-- [ ] **Step 4: Gate and commit**
+- [x] **Step 4: Gate and commit**
 
 ```bash
 cargo +nightly fmt --all && cargo +nightly clippy --all-targets --all-features -- -D warnings
@@ -3976,7 +3976,7 @@ git commit -m "feat(factory.zip_observables): add N-ary zip factory"
 **Files:**
 - Modify: `missing_features.md`, `guide/operators.md`, `CHANGELOG.md`, `tests/v1_integration.rs`
 
-- [ ] **Step 1: Add two integration tests to `tests/v1_integration.rs`**
+- [x] **Step 1: Add two integration tests to `tests/v1_integration.rs`**
 
 Append at the end of the file:
 
@@ -4016,7 +4016,7 @@ fn test_fork_join_feeds_every() {
 Run: `cargo test --test v1_integration`
 Expected: pass.
 
-- [ ] **Step 2: Correct and extend `missing_features.md`**
+- [x] **Step 2: Correct and extend `missing_features.md`**
 
 Make these edits:
 
@@ -4028,7 +4028,7 @@ Make these edits:
 - Under "Observable Utility Operators": change `TimeInterval` to `[x]` with `- implemented as time_interval, emits Elapsed { value, interval }`; change `Timestamp` to `[x]` with `- implemented as timestamp, emits Timestamped { value, timestamp }`; remove the `Materialize/Dematerialize` row (moved above).
 - Under "Conditional and Boolean Operators": change `All` sub-bullet to `- implemented as every (doc alias all)`; change `Amb` to `[x]` with `- see Race`; add `- [x] IsEmpty — emit whether the source was empty (is_empty)`; add `- [x] ThrowIfEmpty — error instead of completing on an empty source (throw_if_empty)`; add `- [x] EndWith — emit values after the source completes (end_with)`.
 
-- [ ] **Step 3: Add rows to `guide/operators.md`**
+- [x] **Step 3: Add rows to `guide/operators.md`**
 
 Filtering table, after `contains`:
 
@@ -4059,7 +4059,7 @@ Utility table, at the end:
 | `throw_if_empty` | Errors instead of completing when the source is empty. |
 ```
 
-- [ ] **Step 4: Update `CHANGELOG.md`**
+- [x] **Step 4: Update `CHANGELOG.md`**
 
 Under `## [Unreleased]`, in the `### ✨ New Features` list, add a bullet:
 
@@ -4067,7 +4067,7 @@ Under `## [Unreleased]`, in the `### ✨ New Features` list, add a bullet:
 *   **RxJS Parity, Tier 1a**: `every`, `ignore_elements`, `is_empty`, `element_at`, `element_at_or`, `find`, `find_index`, `end_with`, `throw_if_empty`, `materialize`, `dematerialize`, `timestamp`, `time_interval`, `race`, and the N-ary factories `race_observables`, `fork_join_observables`, `combine_latest_observables`, `zip_observables`.
 ```
 
-- [ ] **Step 5: Run the doc-driven tests and commit**
+- [x] **Step 5: Run the doc-driven tests and commit**
 
 Run: `cargo test --doc && cargo test --test v1_integration`
 Expected: pass (guide markdown is compiled as doctests, so table edits must not break code fences).
@@ -4082,7 +4082,7 @@ git commit -m "docs: record tier 1a operators in guide, changelog and missing_fe
 
 ### Task 16: Full gate and PR
 
-- [ ] **Step 1: Run the full matrix**
+- [x] **Step 1: Run the full matrix**
 
 ```bash
 cargo test
@@ -4094,7 +4094,7 @@ wasm-pack test --node
 
 Expected: every suite green. If `wasm-pack test --node` fails on a pre-existing issue unrelated to the new operators, note it in the PR body rather than fixing it here.
 
-- [ ] **Step 2: Push and open the PR**
+- [x] **Step 2: Push and open the PR**
 
 ```bash
 git push -u origin feat/operator-parity-tier1
