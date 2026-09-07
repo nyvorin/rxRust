@@ -70,6 +70,7 @@ use crate::ops::{
   map::Map,
   map_err::MapErr,
   map_to::MapTo,
+  materialize::{Dematerialize, Materialize, Notification},
   merge::Merge,
   merge_all::MergeAll,
   observe_on::ObserveOn,
@@ -1576,6 +1577,46 @@ pub trait Observable: Context {
     F: FnOnce(),
   {
     self.transform(|source| Finalize { source, func: f })
+  }
+
+  /// Emit every event as a [`Notification`] item and complete afterwards
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter([1])
+  ///   .materialize()
+  ///   .subscribe(|n| println!("{:?}", n));
+  /// // Prints: Next(1), Complete
+  /// ```
+  fn materialize(self) -> Self::With<Materialize<Self::Inner>> {
+    self.transform(|source| Materialize { source })
+  }
+
+  /// Replay [`Notification`] items as real events
+  ///
+  /// The source must be infallible. Stops at the first `Error` or
+  /// `Complete` notification.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter(vec![Notification::<i32, String>::Next(1), Notification::Complete])
+  ///   .dematerialize()
+  ///   .on_error(|e| println!("error: {}", e))
+  ///   .subscribe(|v| println!("{}", v));
+  /// // Prints: 1
+  /// ```
+  fn dematerialize<Item, Err>(self) -> Self::With<Dematerialize<Self::Inner, Item, Err>>
+  where
+    Self: Observable<Err = std::convert::Infallible>,
+    for<'a> Self::Item<'a>: Into<Notification<Item, Err>>,
+  {
+    self.transform(Dematerialize::new)
   }
 
   /// Emit specified values before beginning to emit source values
