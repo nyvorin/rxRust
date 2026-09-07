@@ -94,6 +94,8 @@ use crate::ops::{
   tap::Tap,
   throttle::{Throttle, ThrottleEdge, ThrottleWhenParam},
   throw_if_empty::ThrowIfEmpty,
+  time_interval::TimeInterval,
+  timestamp::Timestamp,
   with_latest_from::WithLatestFrom,
   zip::Zip,
 };
@@ -1617,6 +1619,39 @@ pub trait Observable: Context {
     for<'a> Self::Item<'a>: Into<Notification<Item, Err>>,
   {
     self.transform(Dematerialize::new)
+  }
+
+  /// Wrap each item with the [`Instant`] it was emitted
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter([1])
+  ///   .timestamp()
+  ///   .subscribe(|t| println!("{} at {:?}", t.value, t.timestamp));
+  /// ```
+  fn timestamp(self) -> Self::With<Timestamp<Self::Inner>> {
+    self.transform(|source| Timestamp { source })
+  }
+
+  /// Wrap each item with the time elapsed since the previous emission
+  ///
+  /// The first item measures from subscription.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter([1])
+  ///   .time_interval()
+  ///   .subscribe(|e| println!("{} after {:?}", e.value, e.interval));
+  /// ```
+  #[doc(alias = "timeInterval")]
+  fn time_interval(self) -> Self::With<TimeInterval<Self::Inner>> {
+    self.transform(|source| TimeInterval { source })
   }
 
   /// Emit specified values before beginning to emit source values
