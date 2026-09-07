@@ -88,6 +88,7 @@ Operators that selectively emit items from the source Observable.
 | `find` / `find_index` | Emits the first item (or its index) matching a predicate. |
 | `element_at` / `element_at_or` | Emits the item at a zero-based index, with an optional default. |
 | `ignore_elements` | Drops every item, mirrors only error and completion. |
+| `audit` / `audit_time` | Emits the latest item when a window ends; the next item opens a new window. |
 
 ### Combination Operators
 
@@ -107,6 +108,9 @@ Operators that work with multiple source Observables to create a single Observab
 | `combine_latest_observables` | N-ary `combine_latest` emitting a `Vec` snapshot. |
 | `zip_observables` | N-ary `zip` emitting a `Vec` row. |
 | `end_with` | Emits given values after the source completes. |
+| `exhaust_map` | Maps to inner Observables, ignoring items while an inner one is active. |
+| `share` / `share_replay` | Multicasts with reference counting; `share_replay` replays the last `n` items to late subscribers. |
+| `publish_replay` / `publish_behavior` / `publish_last` | Connectable multicasting through a `ReplaySubject`, `BehaviorSubject`, or `AsyncSubject`. |
 
 ### Utility Operators
 
@@ -128,3 +132,6 @@ Operators for observing, timing, and error handling.
 | `timestamp` | Wraps each item with the `Instant` it was emitted. |
 | `time_interval` | Wraps each item with the time since the previous emission. |
 | `throw_if_empty` | Errors instead of completing when the source is empty. |
+| `catch_error` | Recovers from an error by switching to a fallback Observable. |
+| `timeout` | Errors if the source is silent for longer than a duration. |
+| `repeat` / `repeat_forever` | Resubscribes to the source when it completes. |
