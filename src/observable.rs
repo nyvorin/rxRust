@@ -104,7 +104,9 @@ use crate::ops::{
 use crate::{
   observer::FnMutObserver,
   scheduler::{Duration, Instant},
-  subject::{ReplaySubjectOf, Subject, SubjectPtr, SubjectPtrMutRef},
+  subject::{
+    AsyncSubjectOf, BehaviorSubjectOf, ReplaySubjectOf, Subject, SubjectPtr, SubjectPtrMutRef,
+  },
   subscription::Subscription,
 };
 
@@ -2195,6 +2197,26 @@ pub trait Observable: Context {
       },
       connection,
     })
+  }
+
+  /// Multicast through an `AsyncSubject`: subscribers receive only the
+  /// source's last value, when it completes
+  #[doc(alias = "publishLast")]
+  fn publish_last<'a>(
+    self,
+  ) -> Self::With<ConnectableObservable<Self::Inner, AsyncSubjectOf<'a, Self>>> {
+    self.multicast(AsyncSubjectOf::<'a, Self>::default())
+  }
+
+  /// Multicast through a `BehaviorSubject` seeded with `initial`
+  #[doc(alias = "publishBehavior")]
+  fn publish_behavior<'a>(
+    self, initial: Self::Item<'a>,
+  ) -> Self::With<ConnectableObservable<Self::Inner, BehaviorSubjectOf<'a, Self>>>
+  where
+    Self::Item<'a>: Clone,
+  {
+    self.multicast(BehaviorSubjectOf::<'a, Self>::new(initial))
   }
 
   /// Multicast through a plain `Subject`, connecting the source when the

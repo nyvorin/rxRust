@@ -105,7 +105,10 @@ use crate::{
   observable::{defer::Defer, *},
   observer::Emitter,
   scheduler::{Duration, Instant},
-  subject::{BehaviorSubject, ReplayBuffer, ReplaySubject, Subject, SubjectPtr, SubjectPtrMutRef},
+  subject::{
+    AsyncState, AsyncSubject, BehaviorSubject, ReplayBuffer, ReplaySubject, Subject, SubjectPtr,
+    SubjectPtrMutRef,
+  },
   subscription::Subscription,
 };
 
@@ -384,6 +387,15 @@ pub trait ObservableFactory: Context<Inner = ()> {
     ReplaySubject<SubjectPtr<'a, Self, Item, Err>, Self::RcMut<ReplayBuffer<Item, Err>>>,
   > {
     Self::lift(ReplaySubject::new(None))
+  }
+
+  /// Creates an `AsyncSubject`, which emits only its last value, on
+  /// completion.
+  #[allow(clippy::type_complexity)]
+  fn async_subject<'a, Item: Clone, Err: Clone>()
+  -> Self::With<AsyncSubject<SubjectPtr<'a, Self, Item, Err>, Self::RcMut<AsyncState<Item, Err>>>>
+  {
+    Self::lift(AsyncSubject::default())
   }
 
   /// Creates an observable from an iterator that emits each item synchronously

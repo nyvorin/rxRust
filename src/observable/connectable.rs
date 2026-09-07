@@ -261,4 +261,22 @@ mod tests {
 
     assert_eq!(*vals.borrow(), vec![42]);
   }
+
+  #[rxrust_macro::test]
+  fn test_publish_last_emits_only_final_value() {
+    let (results, capture) = create_value_capture();
+    let connectable = Local::from_iter(vec![1, 2, 3]).publish_last();
+    connectable.fork().subscribe(capture);
+    connectable.connect();
+    assert_eq!(*results.borrow(), vec![3]);
+  }
+
+  #[rxrust_macro::test]
+  fn test_publish_behavior_seeds_subscribers() {
+    let (results, capture) = create_value_capture();
+    let connectable = Local::from_iter(vec![1, 2]).publish_behavior(0);
+    connectable.fork().subscribe(capture);
+    connectable.connect();
+    assert_eq!(*results.borrow(), vec![0, 1, 2]);
+  }
 }

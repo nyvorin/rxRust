@@ -1,6 +1,7 @@
 //! Subscriber-count access for any subject usable in multicasting.
 
 use super::{
+  async_subject::{AsyncState, AsyncSubject},
   behavior_subject::BehaviorSubject,
   replay_subject::{ReplayBuffer, ReplaySubject},
   subject_core::Subject,
@@ -49,4 +50,14 @@ where
   fn subscriber_count(&self) -> usize { self.subject.subscriber_count() }
 
   fn is_terminated(&self) -> bool { ReplaySubject::is_terminated(self) }
+}
+
+impl<P, V, Item, Err> MulticastSubject for AsyncSubject<P, V>
+where
+  Subject<P>: MulticastSubject,
+  V: RcDeref<Target = AsyncState<Item, Err>>,
+{
+  fn subscriber_count(&self) -> usize { self.subject.subscriber_count() }
+
+  fn is_terminated(&self) -> bool { AsyncSubject::is_terminated(self) }
 }
