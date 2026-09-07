@@ -1108,6 +1108,41 @@ pub trait ObservableFactory: Context<Inner = ()> {
       .collect();
     Self::lift(crate::ops::fork_join::ForkJoin { sources })
   }
+
+  /// Combine the latest values of many observables.
+  ///
+  /// Once every source has emitted, each new item emits a `Vec` of the
+  /// latest value from every source in input order. Items must be `Clone`.
+  /// Completes when all sources complete, or as soon as one completes
+  /// without emitting. An empty iterator completes immediately.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::combine_latest_observables([Local::from_iter(vec![1, 2]), Local::from_iter(vec![3])])
+  ///   .subscribe(|v| println!("{:?}", v));
+  /// // Prints: [2, 3]
+  /// ```
+  ///
+  /// # See Also
+  ///
+  /// * [`Observable::combine_latest`] - Binary instance method with a combiner
+  #[doc(alias = "combineLatest")]
+  fn combine_latest_observables<O, I>(
+    observables: I,
+  ) -> Self::With<crate::ops::combine_latest_all::CombineLatestAll<O>>
+  where
+    O: ObservableType,
+    I: IntoIterator<Item = Self::With<O>>,
+  {
+    let sources = observables
+      .into_iter()
+      .map(Context::into_inner)
+      .collect();
+    Self::lift(crate::ops::combine_latest_all::CombineLatestAll { sources })
+  }
 }
 
 // Blanket implementation: Any `Context<Inner = ()>`, reuires `Inner = ()` to
