@@ -531,3 +531,31 @@ fn test_combine_latest_reentrancy_path() {
 
   s1.next(2);
 }
+
+#[rxrust_macro::test]
+fn test_materialize_round_trip_with_race_and_end_with() {
+  let result = Rc::new(RefCell::new(Vec::new()));
+  let result_clone = result.clone();
+
+  Local::from_iter(vec![1, 2])
+    .race(Local::from_iter(vec![9]))
+    .end_with(vec![3])
+    .materialize()
+    .dematerialize()
+    .subscribe(move |v| result_clone.borrow_mut().push(v));
+
+  assert_eq!(*result.borrow(), vec![1, 2, 3]);
+}
+
+#[rxrust_macro::test]
+fn test_fork_join_feeds_every() {
+  let result = Rc::new(RefCell::new(Vec::new()));
+  let result_clone = result.clone();
+
+  Local::fork_join_observables([Local::from_iter(vec![1, 2, 3]), Local::from_iter(vec![4, 5])])
+    .map(|last_values: Vec<i32>| last_values.into_iter().sum::<i32>())
+    .every(|sum| *sum == 8)
+    .subscribe(move |v| result_clone.borrow_mut().push(v));
+
+  assert_eq!(*result.borrow(), vec![true]);
+}
