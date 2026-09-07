@@ -29,6 +29,7 @@
 //! For interactive marble diagrams, see [ReactiveX.io](http://reactivex.io/documentation/operators.html).
 //! For Rust-specific usage, see the [Operators Guide](https://rxrust.github.io/rxRust/operators.html).
 
+pub mod audit;
 pub mod average;
 pub mod box_it;
 pub mod buffer;
@@ -100,6 +101,7 @@ pub mod zip;
 pub mod zip_all;
 
 // Re-exports
+pub use audit::*;
 pub use average::*;
 pub use box_it::*;
 pub use buffer::*;

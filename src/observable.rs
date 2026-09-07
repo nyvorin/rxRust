@@ -40,6 +40,7 @@ pub use trivial::*;
 // Internal imports (avoid circular dependency with prelude)
 use crate::context::Context;
 use crate::ops::{
+  audit::{Audit, AuditTime},
   average::{Average, Averageable},
   buffer::Buffer, // Restored
   buffer_count::BufferCount,
@@ -1599,6 +1600,55 @@ pub trait Observable: Context {
       param: Self::With::from_parts(duration, scheduler),
       edge,
     })
+  }
+
+  /// Emit the most recent item when the observable returned by `selector`
+  /// emits, then wait for the next item to start a new window
+  ///
+  /// Equivalent to `throttle(selector, ThrottleEdge::trailing())`.
+  fn audit<F, Out>(self, selector: F) -> Self::With<Audit<Self::Inner, F>>
+  where
+    F: for<'a> FnMut(&Self::Item<'a>) -> Out,
+    Out: Observable<Err = Self::Err>,
+  {
+    self.throttle(selector, ThrottleEdge::trailing())
+  }
+
+  /// Emit the most recent item once `duration` has passed since the first
+  /// item of the window
+  ///
+  /// Equivalent to `throttle_time(duration, ThrottleEdge::trailing())`.
+  ///
+  /// # Examples
+  ///
+  /// ```rust,no_run
+  /// use rxrust::prelude::*;
+  ///
+  /// # #[tokio::main(flavor = "local")]
+  /// # async fn main() {
+  /// Local::interval(Duration::from_millis(10))
+  ///   .audit_time(Duration::from_millis(100))
+  ///   .subscribe(|v| println!("latest in window: {}", v));
+  /// # }
+  /// ```
+  #[doc(alias = "auditTime")]
+  fn audit_time(
+    self, duration: Duration,
+  ) -> Self::With<AuditTime<Self::Inner, Self::With<Duration>>>
+  where
+    Self::With<Duration>: Context<Scheduler = Self::Scheduler>,
+  {
+    self.throttle_time(duration, ThrottleEdge::trailing())
+  }
+
+  /// [`Observable::audit_time`] with an explicit scheduler
+  fn audit_time_with<Sch>(
+    self, duration: Duration, scheduler: Sch,
+  ) -> Self::With<AuditTime<Self::Inner, Self::With<Duration>>>
+  where
+    Self::With<Duration>: Context<Scheduler = Sch>,
+  {
+    self.throttle_time_with(duration, ThrottleEdge::trailing(), scheduler)
   }
 
   /// Emit the most recently emitted value when a sampler Observable emits
