@@ -61,6 +61,7 @@ use crate::ops::{
   ignore_elements::IgnoreElements,
   into_future::{ObservableFutureOf, SupportsIntoFuture},
   into_stream::SupportsIntoStream,
+  is_empty::IsEmpty,
   last::Last,
   lifecycle::{OnComplete, OnError},
   map::Map,
@@ -730,6 +731,25 @@ pub trait Observable: Context {
   #[doc(alias = "ignoreElements")]
   fn ignore_elements(self) -> Self::With<IgnoreElements<Self::Inner>> {
     self.transform(|source| IgnoreElements { source })
+  }
+
+  /// Emit whether the source completed without emitting any item
+  ///
+  /// Emits `false` and completes on the first item, unsubscribing the
+  /// source; emits `true` when an empty source completes.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let observable = Local::from_iter([1, 2, 3]).is_empty();
+  /// // Emits: false
+  /// ```
+  #[doc(alias = "isEmpty")]
+  #[allow(clippy::wrong_self_convention)]
+  fn is_empty(self) -> Self::With<IsEmpty<Self::Inner>> {
+    self.transform(|source| IsEmpty { source })
   }
 
   /// Emit values while a predicate returns true
