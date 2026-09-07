@@ -52,6 +52,7 @@ use crate::ops::{
   delay::{Delay, DelaySubscriptionOp},
   distinct::{Distinct, DistinctKey},
   distinct_until_changed::{DistinctUntilChanged, DistinctUntilKeyChanged},
+  element_at::{ElementAt, ElementAtOr},
   every::Every,
   filter::Filter,
   filter_map::FilterMap,
@@ -513,6 +514,42 @@ pub trait Observable: Context {
     self, default_value: Self::Item<'a>,
   ) -> Self::With<DefaultIfEmpty<Take<Self::Inner>, Self::Item<'a>>> {
     self.transform(|source| DefaultIfEmpty { source: Take { source, count: 1 }, default_value })
+  }
+
+  /// Emit only the item at the zero-based `index`, then complete
+  ///
+  /// Completes without emitting if the source has fewer than `index + 1`
+  /// items. Use [`Observable::element_at_or`] to supply a fallback.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let observable = Local::from_iter([10, 20, 30]).element_at(1);
+  /// // Emits: 20
+  /// ```
+  #[doc(alias = "elementAt")]
+  fn element_at(self, index: usize) -> Self::With<ElementAt<Self::Inner>> {
+    self.transform(|source| Take { source: Skip { source, count: index }, count: 1 })
+  }
+
+  /// Emit the item at `index`, or `default_value` if the source is too short
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let observable = Local::from_iter([10, 20]).element_at_or(5, 0);
+  /// // Emits: 0
+  /// ```
+  fn element_at_or<'a>(
+    self, index: usize, default_value: Self::Item<'a>,
+  ) -> Self::With<ElementAtOr<Self::Inner, Self::Item<'a>>> {
+    self.transform(|source| {
+      DefaultIfEmpty::new(Take { source: Skip { source, count: index }, count: 1 }, default_value)
+    })
   }
 
   /// Skip the first `count` values from the source observable
