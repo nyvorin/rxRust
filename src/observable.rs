@@ -75,6 +75,7 @@ use crate::ops::{
   merge_all::MergeAll,
   observe_on::ObserveOn,
   pairwise::Pairwise,
+  race::Race,
   reduce::{Reduce, ReduceFn, ReduceInitialFn},
   retry::{Retry, RetryPolicy},
   sample::Sample,
@@ -977,6 +978,30 @@ pub trait Observable: Context {
     S2: Observable<Inner: ObservableType<Item<'a> = Self::Item<'a>, Err = Self::Err>> + 'a,
   {
     self.transform(|core| Merge { source1: core, source2: other.into_inner() })
+  }
+
+  /// Mirror whichever of two observables emits first
+  ///
+  /// Both are subscribed; the first to emit an item, error, or completion
+  /// wins and the other is unsubscribed.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter([1, 2])
+  ///   .race(Local::from_iter([3, 4]))
+  ///   .subscribe(|v| println!("{}", v));
+  /// // Prints: 1, 2
+  /// ```
+  #[doc(alias = "raceWith")]
+  fn race<'a, S2>(self, other: S2) -> Self::With<Race<Self::Inner, S2::Inner>>
+  where
+    Self: 'a,
+    S2: Observable<Inner: ObservableType<Item<'a> = Self::Item<'a>, Err = Self::Err>> + 'a,
+  {
+    self.transform(|source_a| Race { source_a, source_b: other.into_inner() })
   }
 
   /// Combine the latest values from two observables
