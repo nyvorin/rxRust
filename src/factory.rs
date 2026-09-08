@@ -102,7 +102,7 @@
 // Internal module imports
 use crate::{
   context::Context,
-  observable::{defer::Defer, *},
+  observable::{Generate, defer::Defer, *},
   observer::Emitter,
   scheduler::{Duration, Instant},
   subject::{
@@ -483,6 +483,28 @@ pub trait ObservableFactory: Context<Inner = ()> {
   ///   at subscription time
   /// * [`FromFn`] - The underlying observable implementation
   fn from_fn<F>(f: F) -> Self::With<FromFn<F>> { Self::lift(FromFn(f)) }
+
+  /// Emit `initial`, then `iterate(&state)` while `condition(&state)` holds.
+  ///
+  /// Lazy: pairs well with `take` for unbounded generators.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::generate(1, |v| *v <= 3, |v| v + 1).subscribe(|v| println!("{}", v));
+  /// // Prints: 1, 2, 3
+  /// ```
+  fn generate<T, Cond, Iter>(
+    initial: T, condition: Cond, iterate: Iter,
+  ) -> Self::With<FromIter<Generate<T, Cond, Iter>>>
+  where
+    Cond: FnMut(&T) -> bool,
+    Iter: FnMut(&T) -> T,
+  {
+    Self::from_iter(Generate::new(initial, condition, iterate))
+  }
 
   /// Creates an observable that calls a factory function to generate a new
   /// observable for each subscriber.
