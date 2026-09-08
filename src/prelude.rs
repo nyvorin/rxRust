@@ -13,7 +13,7 @@
 pub use crate::observable::{
   FromCallback, Generate, Iif, LocalBoxedObservable, LocalBoxedObservableClone,
   LocalBoxedObservableMutRef, LocalBoxedObservableMutRefClone, SharedBoxedObservable,
-  SharedBoxedObservableClone, SharedBoxedObservableMutRef, SharedBoxedObservableMutRefClone,
+  SharedBoxedObservableClone, SharedBoxedObservableMutRef, SharedBoxedObservableMutRefClone, Using,
 };
 // Observer trait
 pub use crate::observer::Observer;

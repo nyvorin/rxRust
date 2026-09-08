@@ -102,7 +102,7 @@
 // Internal module imports
 use crate::{
   context::Context,
-  observable::{FromCallback, Generate, Iif, defer::Defer, *},
+  observable::{FromCallback, Generate, Iif, Using, defer::Defer, *},
   observer::Emitter,
   scheduler::{Duration, Instant},
   subject::{
@@ -581,6 +581,29 @@ pub trait ObservableFactory: Context<Inner = ()> {
     O: ObservableType,
   {
     Self::lift(Defer::new(f))
+  }
+
+  /// Create a resource per subscription and an observable from it; the
+  /// resource is dropped when the subscription terminates or is
+  /// unsubscribed.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::using(|| String::from("res"), |r| Local::of(r.len())).subscribe(|v| println!("{}", v));
+  /// // Prints: 3
+  /// ```
+  fn using<RF, OF, Res, Out>(
+    resource_factory: RF, observable_factory: OF,
+  ) -> Self::With<Using<RF, OF, Res, Self::With<Out>>>
+  where
+    RF: FnOnce() -> Res,
+    OF: FnOnce(&Res) -> Self::With<Out>,
+    Out: ObservableType,
+  {
+    Self::lift(Using::new(resource_factory, observable_factory))
   }
 
   /// Subscribe to `then_source` when `condition()` is true at subscribe

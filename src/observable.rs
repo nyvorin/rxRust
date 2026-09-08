@@ -23,6 +23,7 @@ pub mod interval;
 pub mod of;
 pub mod timer;
 pub mod trivial;
+pub mod using;
 
 // Re-exports
 // Standard library imports
@@ -42,6 +43,7 @@ pub use interval::*;
 pub use of::*;
 pub use timer::*;
 pub use trivial::*;
+pub use using::*;
 
 // Internal imports (avoid circular dependency with prelude)
 use crate::context::Context;
