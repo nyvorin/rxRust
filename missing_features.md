@@ -16,12 +16,13 @@ Operators that originate new Observables.
   - use `new` method in rxRust
 - [x] Defer — do not create the Observable until the observer subscribes, and create a fresh Observable for each observer
 - [x] Empty/Never/Throw — create Observables that have very precise and limited behavior
-- [ ] From — convert some other object or data structure into an Observable
+- [x] From — convert some other object or data structure into an Observable
   - [x] `from_iter`
   - [x] `from_fn`
   - [x] `from_future`
   - [x] `from_stream`
-  - [ ] `from_callback`
+  - [x] `from_callback`
+  - [x] `generate` (state-machine iterator)
 - [x] Interval — create an Observable that emits a sequence of integers spaced by a particular time interval
 - [x] Just — convert an object or a set of objects into an Observable that emits that or those objects
   - named `of`, `of_result`, `of_option` in rxRust
@@ -32,6 +33,7 @@ Operators that originate new Observables.
 - [x] Start — create an Observable that emits the return value of a function
   - `defer` or `from_fn` covers this.
 - [x] Timer — create an Observable that emits a single item after a given delay
+- [x] Iif — choose between two Observables at subscribe time (`iif`)
 
 ### Transforming Observables
 
@@ -46,6 +48,7 @@ Operators that transform items that are emitted by an Observable.
   - implemented as `merge_all` (flatten) or `map(...).merge_all(...)`
   - [x] ExhaustMap — ignore outer items while an inner Observable is active (`exhaust_map`)
 - [x] GroupBy — divide an Observable into a set of Observables that each emit a different group of items from the original Observable, organized by key
+- [x] Partition — split an Observable into the items matching a predicate and the rest (`partition`)
 - [x] Map — transform the items emitted by an Observable by applying a function to each item
 - [x] Scan — apply a function to each item emitted by an Observable, sequentially, and emit each successive value
 - [x] Materialize/Dematerialize — represent both the items emitted and the notifications sent as emitted items, or reverse this process
@@ -71,6 +74,7 @@ Operators that selectively emit items from a source Observable.
 - [x] IgnoreElements — do not emit any items from an Observable but mirror its termination notification
   - implemented as `ignore_elements`
 - [x] Last — emit only the last item emitted by an Observable
+- [x] Single — emit the only item, or error with `SingleError` (`single`)
 - [x] Sample — emit the most recent item emitted by an Observable within periodic time intervals
 - [x] Skip — suppress the first n items emitted by an Observable
 - [x] SkipLast — suppress the last n items emitted by an Observable
@@ -106,6 +110,7 @@ Operators that help to recover from error notifications from an Observable
 
 - [x] Catch — recover from an onError notification by continuing the sequence without error
   - implemented as `catch_error`; `map_err` transforms the error type
+- [x] OnErrorResumeNext — continue with another Observable on error or completion (`on_error_resume_next`)
 - [x] Retry — if a source Observable sends an onError notification, resubscribe to it in the hopes that it will complete without error
   - Implemented with generic policies (`count`, `delay`, `reset_on_success`).
 
@@ -126,7 +131,8 @@ A toolbox of useful Operators for working with Observables
   - `timeout`, `timeout_with`, `timeout_or_else`, `timeout_or_else_with`; emits `TimeoutError` by default
 - [x] Timestamp — attach a timestamp to each item emitted by an Observable
   - implemented as `timestamp`, emits `Timestamped { value, timestamp }`
-- [ ] Using — create a disposable resource that has the same lifespan as the Observable
+- [x] Using — create a disposable resource that has the same lifespan as the Observable
+  - implemented as `using(resource_factory, observable_factory)`
 
 ### Conditional and Boolean Operators
 
@@ -140,7 +146,7 @@ Operators that evaluate one or more Observables or items emitted by Observables
 - [x] DefaultIfEmpty — emit items from the source Observable, or a default item if the source Observable emits nothing
 - [x] ThrowIfEmpty — error instead of completing when the source Observable emits nothing (`throw_if_empty`)
 - [x] IsEmpty — emit whether the source Observable completed without items (`is_empty`)
-- [ ] SequenceEqual — determine whether two Observables emit the same sequence of items
+- [x] SequenceEqual — determine whether two Observables emit the same sequence of items (`sequence_equal`)
 - [x] SkipUntil — discard items emitted by an Observable until a second Observable emits an item
 - [x] SkipWhile — discard items emitted by an Observable until a specified condition becomes false
 - [x] TakeUntil — discard items emitted by an Observable after a second Observable emits an item or terminates

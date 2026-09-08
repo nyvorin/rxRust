@@ -12,14 +12,18 @@ pub mod boxed;
 pub mod connectable;
 pub mod create;
 pub mod defer;
+pub mod from_callback;
 pub mod from_fn;
 pub mod from_future;
 pub mod from_iter;
 pub mod from_stream;
+pub mod generate;
+pub mod iif;
 pub mod interval;
 pub mod of;
 pub mod timer;
 pub mod trivial;
+pub mod using;
 
 // Re-exports
 // Standard library imports
@@ -28,14 +32,18 @@ pub use boxed::*;
 pub use connectable::*;
 pub use create::*;
 pub use defer::*;
+pub use from_callback::*;
 pub use from_fn::*;
 pub use from_future::FromFuture;
 pub use from_iter::*;
 pub use from_stream::{FromStream, FromStreamResult};
+pub use generate::*;
+pub use iif::*;
 pub use interval::*;
 pub use of::*;
 pub use timer::*;
 pub use trivial::*;
+pub use using::*;
 
 // Internal imports (avoid circular dependency with prelude)
 use crate::context::Context;
@@ -77,7 +85,9 @@ use crate::ops::{
   merge::Merge,
   merge_all::MergeAll,
   observe_on::ObserveOn,
+  on_error_resume_next::OnErrorResumeNext,
   pairwise::Pairwise,
+  partition::Partition,
   race::Race,
   reduce::{Reduce, ReduceFn, ReduceInitialFn},
   ref_count::{PublishSubjectOf, RefCount, ShareOf, ShareReplayOf},
@@ -86,6 +96,8 @@ use crate::ops::{
   sample::Sample,
   scan::Scan,
   scan_map::ScanMap,
+  sequence_equal::SequenceEqual,
+  single::{Single, SingleError},
   skip::Skip,
   skip_last::SkipLast,
   skip_until::SkipUntil,
@@ -247,6 +259,37 @@ pub trait Observable: Context {
     F: for<'a> FnMut(&Self::Item<'a>) -> bool,
   {
     self.transform(|source| Filter { source, filter })
+  }
+
+  /// Split the source into the items that satisfy `predicate` and the rest
+  ///
+  /// Returns `(matching, rest)`. Each half subscribes to the source on its
+  /// own; apply `share()` first if the source must be subscribed once.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let (evens, odds) = Local::from_iter(vec![1, 2, 3]).partition(|v| v % 2 == 0);
+  /// evens.subscribe(|v| println!("even {}", v));
+  /// odds.subscribe(|v| println!("odd {}", v));
+  /// ```
+  #[allow(clippy::type_complexity)]
+  fn partition<F>(
+    self, predicate: F,
+  ) -> (Self::With<Partition<Self::Inner, F>>, Self::With<Partition<Self::Inner, F>>)
+  where
+    Self::Inner: Clone,
+    F: Clone + for<'a> FnMut(&Self::Item<'a>) -> bool,
+  {
+    let matching = self.wrap(Partition {
+      source: self.inner().clone(),
+      predicate: predicate.clone(),
+      keep: true,
+    });
+    let rest = self.transform(|source| Partition { source, predicate, keep: false });
+    (matching, rest)
   }
 
   /// Emit only items that have not been emitted before
@@ -701,6 +744,31 @@ pub trait Observable: Context {
     self.transform(|source| DefaultIfEmpty { source: Last { source }, default_value })
   }
 
+  /// Emit the only item on completion, or error
+  ///
+  /// Errors with `SingleError::Empty` on an empty source and with
+  /// `SingleError::TooMany` when a second item arrives. Requires
+  /// `Err: From<SingleError>`.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter(vec![1])
+  ///   .map_err(|_: std::convert::Infallible| SingleError::Empty)
+  ///   .single()
+  ///   .on_error(|e| println!("{}", e))
+  ///   .subscribe(|v| println!("{}", v));
+  /// // Prints: 1
+  /// ```
+  fn single(self) -> Self::With<Single<Self::Inner>>
+  where
+    Self::Err: From<SingleError>,
+  {
+    self.transform(|source| Single { source })
+  }
+
   /// Skip the last `count` values from the source observable
   ///
   /// This operator buffers up to `count` values. When a new value arrives
@@ -783,6 +851,29 @@ pub trait Observable: Context {
     Item: Clone,
   {
     self.transform(|source| Contains { source, target })
+  }
+
+  /// Emit whether this observable and `other` emit equal sequences
+  ///
+  /// Compares items pairwise; emits `false` and completes at the first
+  /// mismatch or length difference, `true` when both complete matched.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let observable = Local::from_iter(vec![1, 2]).sequence_equal(Local::from_iter(vec![1, 2]));
+  /// // Emits: true
+  /// ```
+  #[doc(alias = "sequenceEqual")]
+  fn sequence_equal<'a, S2>(self, other: S2) -> Self::With<SequenceEqual<Self::Inner, S2::Inner>>
+  where
+    Self: 'a,
+    Self::Item<'a>: PartialEq,
+    S2: Observable<Inner: ObservableType<Item<'a> = Self::Item<'a>, Err = Self::Err>> + 'a,
+  {
+    self.transform(|source_a| SequenceEqual { source_a, source_b: other.into_inner() })
   }
 
   /// Emit whether every item satisfies a predicate
@@ -1226,6 +1317,32 @@ pub trait Observable: Context {
     Out: Context<Inner: ObservableType>,
   {
     self.transform(|source| CatchError { source, handler })
+  }
+
+  /// Continue with `next` when the source errors or completes
+  ///
+  /// A source error is discarded. The output error type is `next`'s.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::throw_err("boom".to_string())
+  ///   .map(|_| 0)
+  ///   .on_error_resume_next(Local::of(1))
+  ///   .subscribe(|v| println!("{}", v));
+  /// // Prints: 1
+  /// ```
+  #[doc(alias = "onErrorResumeNext")]
+  fn on_error_resume_next<'a, N>(
+    self, next: N,
+  ) -> Self::With<OnErrorResumeNext<Self::Inner, N::Inner>>
+  where
+    Self: 'a,
+    N: Observable<Inner: ObservableType<Item<'a> = Self::Item<'a>>> + 'a,
+  {
+    self.transform(|source| OnErrorResumeNext { source, next: next.into_inner() })
   }
 
   /// Execute a callback when the stream completes

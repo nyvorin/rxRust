@@ -102,7 +102,7 @@
 // Internal module imports
 use crate::{
   context::Context,
-  observable::{defer::Defer, *},
+  observable::{FromCallback, Generate, Iif, Using, defer::Defer, *},
   observer::Emitter,
   scheduler::{Duration, Instant},
   subject::{
@@ -484,6 +484,46 @@ pub trait ObservableFactory: Context<Inner = ()> {
   /// * [`FromFn`] - The underlying observable implementation
   fn from_fn<F>(f: F) -> Self::With<FromFn<F>> { Self::lift(FromFn(f)) }
 
+  /// Emit every value handed to the callback, then complete when `f` returns.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_callback(|emit: &mut dyn FnMut(i32)| emit(42)).subscribe(|v| println!("{}", v));
+  /// // Prints: 42
+  /// ```
+  #[doc(alias = "bindCallback")]
+  fn from_callback<F, Item>(f: F) -> Self::With<FromCallback<F, Item>>
+  where
+    F: FnOnce(&mut dyn FnMut(Item)),
+  {
+    Self::lift(FromCallback::new(f))
+  }
+
+  /// Emit `initial`, then `iterate(&state)` while `condition(&state)` holds.
+  ///
+  /// Lazy: pairs well with `take` for unbounded generators.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::generate(1, |v| *v <= 3, |v| v + 1).subscribe(|v| println!("{}", v));
+  /// // Prints: 1, 2, 3
+  /// ```
+  fn generate<T, Cond, Iter>(
+    initial: T, condition: Cond, iterate: Iter,
+  ) -> Self::With<FromIter<Generate<T, Cond, Iter>>>
+  where
+    Cond: FnMut(&T) -> bool,
+    Iter: FnMut(&T) -> T,
+  {
+    Self::from_iter(Generate::new(initial, condition, iterate))
+  }
+
   /// Creates an observable that calls a factory function to generate a new
   /// observable for each subscriber.
   ///
@@ -541,6 +581,55 @@ pub trait ObservableFactory: Context<Inner = ()> {
     O: ObservableType,
   {
     Self::lift(Defer::new(f))
+  }
+
+  /// Create a resource per subscription and an observable from it; the
+  /// resource is dropped when the subscription terminates or is
+  /// unsubscribed.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::using(|| String::from("res"), |r| Local::of(r.len())).subscribe(|v| println!("{}", v));
+  /// // Prints: 3
+  /// ```
+  fn using<RF, OF, Res, Out>(
+    resource_factory: RF, observable_factory: OF,
+  ) -> Self::With<Using<RF, OF, Res, Self::With<Out>>>
+  where
+    RF: FnOnce() -> Res,
+    OF: FnOnce(&Res) -> Self::With<Out>,
+    Out: ObservableType,
+  {
+    Self::lift(Using::new(resource_factory, observable_factory))
+  }
+
+  /// Subscribe to `then_source` when `condition()` is true at subscribe
+  /// time, otherwise to `else_source`.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::iif(|| true, Local::of(1), Local::of(2)).subscribe(|v| println!("{}", v));
+  /// // Prints: 1
+  /// ```
+  fn iif<F, A, B>(
+    condition: F, then_source: Self::With<A>, else_source: Self::With<B>,
+  ) -> Self::With<Iif<F, A, B>>
+  where
+    F: FnOnce() -> bool,
+    A: ObservableType,
+    B: ObservableType<Err = A::Err>,
+  {
+    Self::lift(Iif {
+      condition,
+      then_source: then_source.into_inner(),
+      else_source: else_source.into_inner(),
+    })
   }
 
   /// Creates an observable that emits a single value after a specified delay.

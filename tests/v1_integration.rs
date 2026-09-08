@@ -590,3 +590,16 @@ fn test_catch_error_after_throw_if_empty() {
 
   assert_eq!(*result.borrow(), vec![5]);
 }
+
+#[rxrust_macro::test]
+fn test_partition_then_sequence_equal() {
+  let result = Rc::new(RefCell::new(Vec::new()));
+  let result_c = result.clone();
+
+  let (evens, _odds) = Local::from_iter(vec![1, 2, 3, 4]).partition(|v| v % 2 == 0);
+  evens
+    .sequence_equal(Local::generate(2, |v| *v <= 4, |v| v + 2))
+    .subscribe(move |v| result_c.borrow_mut().push(v));
+
+  assert_eq!(*result.borrow(), vec![true]);
+}
