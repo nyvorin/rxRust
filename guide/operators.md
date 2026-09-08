@@ -41,7 +41,10 @@ Operators that originate new Observables. These are typically factory methods av
 | `behavior_subject` | Creates a new `BehaviorSubject` (multicasting, replays last value). Use `behavior_subject_mut_ref` for mutable reference broadcasting. |
 | `merge_observables` | Merges multiple observables concurrently, subscribing to all at once. |
 | `concat_observables` | Concatenates multiple observables sequentially, subscribing one at a time. |
-
+| `generate` | Emits a state-machine sequence: `initial`, then `iterate(&state)` while `condition(&state)`. |
+| `iif` | Chooses one of two Observables at subscribe time. |
+| `from_callback` | Emits the values handed to a callback, then completes. |
+| `using` | Ties a resource's lifetime to the subscription. |
 ### Transformation Operators
 
 Operators that transform the items emitted by an Observable.
@@ -89,6 +92,9 @@ Operators that selectively emit items from the source Observable.
 | `element_at` / `element_at_or` | Emits the item at a zero-based index, with an optional default. |
 | `ignore_elements` | Drops every item, mirrors only error and completion. |
 | `audit` / `audit_time` | Emits the latest item when a window ends; the next item opens a new window. |
+| `single` | Emits the only item, or errors with `SingleError`. |
+| `partition` | Splits the source into `(matching, rest)` by a predicate. |
+| `sequence_equal` | Emits whether two Observables emit equal sequences. |
 
 ### Combination Operators
 
@@ -135,3 +141,4 @@ Operators for observing, timing, and error handling.
 | `catch_error` | Recovers from an error by switching to a fallback Observable. |
 | `timeout` | Errors if the source is silent for longer than a duration. |
 | `repeat` / `repeat_forever` | Resubscribes to the source when it completes. |
+| `on_error_resume_next` | Continues with another Observable when the source errors or completes. |
