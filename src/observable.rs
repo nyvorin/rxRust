@@ -87,6 +87,7 @@ use crate::ops::{
   sample::Sample,
   scan::Scan,
   scan_map::ScanMap,
+  sequence_equal::SequenceEqual,
   skip::Skip,
   skip_last::SkipLast,
   skip_until::SkipUntil,
@@ -815,6 +816,29 @@ pub trait Observable: Context {
     Item: Clone,
   {
     self.transform(|source| Contains { source, target })
+  }
+
+  /// Emit whether this observable and `other` emit equal sequences
+  ///
+  /// Compares items pairwise; emits `false` and completes at the first
+  /// mismatch or length difference, `true` when both complete matched.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let observable = Local::from_iter(vec![1, 2]).sequence_equal(Local::from_iter(vec![1, 2]));
+  /// // Emits: true
+  /// ```
+  #[doc(alias = "sequenceEqual")]
+  fn sequence_equal<'a, S2>(self, other: S2) -> Self::With<SequenceEqual<Self::Inner, S2::Inner>>
+  where
+    Self: 'a,
+    Self::Item<'a>: PartialEq,
+    S2: Observable<Inner: ObservableType<Item<'a> = Self::Item<'a>, Err = Self::Err>> + 'a,
+  {
+    self.transform(|source_a| SequenceEqual { source_a, source_b: other.into_inner() })
   }
 
   /// Emit whether every item satisfies a predicate
