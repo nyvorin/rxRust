@@ -11,9 +11,9 @@
 // Scheduler-specific Observable aliases
 #[cfg(feature = "scheduler")]
 pub use crate::observable::{
-  Generate, Iif, LocalBoxedObservable, LocalBoxedObservableClone, LocalBoxedObservableMutRef,
-  LocalBoxedObservableMutRefClone, SharedBoxedObservable, SharedBoxedObservableClone,
-  SharedBoxedObservableMutRef, SharedBoxedObservableMutRefClone,
+  FromCallback, Generate, Iif, LocalBoxedObservable, LocalBoxedObservableClone,
+  LocalBoxedObservableMutRef, LocalBoxedObservableMutRefClone, SharedBoxedObservable,
+  SharedBoxedObservableClone, SharedBoxedObservableMutRef, SharedBoxedObservableMutRefClone,
 };
 // Observer trait
 pub use crate::observer::Observer;

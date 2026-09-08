@@ -102,7 +102,7 @@
 // Internal module imports
 use crate::{
   context::Context,
-  observable::{Generate, Iif, defer::Defer, *},
+  observable::{FromCallback, Generate, Iif, defer::Defer, *},
   observer::Emitter,
   scheduler::{Duration, Instant},
   subject::{
@@ -483,6 +483,24 @@ pub trait ObservableFactory: Context<Inner = ()> {
   ///   at subscription time
   /// * [`FromFn`] - The underlying observable implementation
   fn from_fn<F>(f: F) -> Self::With<FromFn<F>> { Self::lift(FromFn(f)) }
+
+  /// Emit every value handed to the callback, then complete when `f` returns.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_callback(|emit: &mut dyn FnMut(i32)| emit(42)).subscribe(|v| println!("{}", v));
+  /// // Prints: 42
+  /// ```
+  #[doc(alias = "bindCallback")]
+  fn from_callback<F, Item>(f: F) -> Self::With<FromCallback<F, Item>>
+  where
+    F: FnOnce(&mut dyn FnMut(Item)),
+  {
+    Self::lift(FromCallback::new(f))
+  }
 
   /// Emit `initial`, then `iterate(&state)` while `condition(&state)` holds.
   ///
