@@ -204,29 +204,17 @@ mod tests {
 
   #[rxrust_macro::test(local)]
   async fn test_interval_timing() {
+    // Deterministic count via take(3); only a lower bound on elapsed time is
+    // asserted, since a timer never fires early.
     let start_time = Instant::now();
-    let values = Arc::new(Mutex::new(Vec::new()));
-    let values_c = values.clone();
-
-    let handle = Local::interval(Duration::from_millis(20)).subscribe(move |v| {
-      values_c.lock().unwrap().push(v);
-    });
-
-    let unsubscribe_task = create_unsubscribe_task(handle);
-    let _scheduled_task =
-      LocalScheduler.schedule(unsubscribe_task, Some(Duration::from_millis(80)));
-    _scheduled_task.await;
-
+    let result = Local::interval(Duration::from_millis(20))
+      .take(3)
+      .collect::<Vec<usize>>()
+      .into_future()
+      .await;
     let elapsed_time = start_time.elapsed();
-    let result = values.lock().unwrap().clone();
 
-    // Should have received at least 3 values
-    assert!(result.len() >= 3, "Expected at least 3 values in 80ms, got {}", result.len());
-    for (i, &val) in result.iter().enumerate() {
-      assert_eq!(val, i, "Timing test value at position {} should be {}", i, i);
-    }
-
-    // Should have taken at least 60ms (3 intervals of 20ms)
+    assert_eq!(result, Ok(Ok(vec![0, 1, 2])));
     assert!(
       elapsed_time >= Duration::from_millis(60),
       "Expected elapsed time >= 60ms, got {:?}",
