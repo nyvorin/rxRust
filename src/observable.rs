@@ -52,22 +52,30 @@ use crate::ops::{
   delay::{Delay, DelaySubscriptionOp},
   distinct::{Distinct, DistinctKey},
   distinct_until_changed::{DistinctUntilChanged, DistinctUntilKeyChanged},
+  element_at::{ElementAt, ElementAtOr},
+  end_with::EndWith,
+  every::Every,
   filter::Filter,
   filter_map::FilterMap,
   finalize::Finalize,
+  find::{Find, FindIndex},
   flat_map::FlatMap,
   group_by::GroupBy,
+  ignore_elements::IgnoreElements,
   into_future::{ObservableFutureOf, SupportsIntoFuture},
   into_stream::SupportsIntoStream,
+  is_empty::IsEmpty,
   last::Last,
   lifecycle::{OnComplete, OnError},
   map::Map,
   map_err::MapErr,
   map_to::MapTo,
+  materialize::{Dematerialize, Materialize, Notification},
   merge::Merge,
   merge_all::MergeAll,
   observe_on::ObserveOn,
   pairwise::Pairwise,
+  race::Race,
   reduce::{Reduce, ReduceFn, ReduceInitialFn},
   retry::{Retry, RetryPolicy},
   sample::Sample,
@@ -86,6 +94,9 @@ use crate::ops::{
   take_while::TakeWhile,
   tap::Tap,
   throttle::{Throttle, ThrottleEdge, ThrottleWhenParam},
+  throw_if_empty::ThrowIfEmpty,
+  time_interval::TimeInterval,
+  timestamp::Timestamp,
   with_latest_from::WithLatestFrom,
   zip::Zip,
 };
@@ -512,6 +523,81 @@ pub trait Observable: Context {
     self.transform(|source| DefaultIfEmpty { source: Take { source, count: 1 }, default_value })
   }
 
+  /// Emit only the item at the zero-based `index`, then complete
+  ///
+  /// Completes without emitting if the source has fewer than `index + 1`
+  /// items. Use [`Observable::element_at_or`] to supply a fallback.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let observable = Local::from_iter([10, 20, 30]).element_at(1);
+  /// // Emits: 20
+  /// ```
+  #[doc(alias = "elementAt")]
+  fn element_at(self, index: usize) -> Self::With<ElementAt<Self::Inner>> {
+    self.transform(|source| Take { source: Skip { source, count: index }, count: 1 })
+  }
+
+  /// Emit the item at `index`, or `default_value` if the source is too short
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let observable = Local::from_iter([10, 20]).element_at_or(5, 0);
+  /// // Emits: 0
+  /// ```
+  fn element_at_or<'a>(
+    self, index: usize, default_value: Self::Item<'a>,
+  ) -> Self::With<ElementAtOr<Self::Inner, Self::Item<'a>>> {
+    self.transform(|source| {
+      DefaultIfEmpty::new(Take { source: Skip { source, count: index }, count: 1 }, default_value)
+    })
+  }
+
+  /// Emit the first item that satisfies `predicate`, then complete
+  ///
+  /// Completes without emitting when nothing matches.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let observable = Local::from_iter([1, 4, 6]).find(|v| v % 2 == 0);
+  /// // Emits: 4
+  /// ```
+  fn find<F>(self, predicate: F) -> Self::With<Find<Self::Inner, F>>
+  where
+    F: for<'a> FnMut(&Self::Item<'a>) -> bool,
+  {
+    self.transform(|source| Take { source: Filter { source, filter: predicate }, count: 1 })
+  }
+
+  /// Emit the zero-based index of the first item that satisfies `predicate`
+  ///
+  /// Completes without emitting when nothing matches.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let observable = Local::from_iter([1, 4, 6]).find_index(|v| v % 2 == 0);
+  /// // Emits: 1
+  /// ```
+  #[doc(alias = "findIndex")]
+  fn find_index<F>(self, predicate: F) -> Self::With<FindIndex<Self::Inner, F>>
+  where
+    F: for<'a> FnMut(&Self::Item<'a>) -> bool,
+  {
+    self.transform(|source| FindIndex { source, predicate })
+  }
+
   /// Skip the first `count` values from the source observable
   ///
   /// This operator ignores the first `count` values emitted by the source
@@ -691,6 +777,64 @@ pub trait Observable: Context {
     self.transform(|source| Contains { source, target })
   }
 
+  /// Emit whether every item satisfies a predicate
+  ///
+  /// Emits `false` and completes as soon as an item fails the predicate,
+  /// unsubscribing the source. Emits `true` on completion when every item
+  /// passed, including for an empty source.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let observable = Local::from_iter([1, 2, 3]).every(|v| *v > 0);
+  /// // Emits: true
+  /// ```
+  #[doc(alias = "all")]
+  fn every<F>(self, predicate: F) -> Self::With<Every<Self::Inner, F>>
+  where
+    F: for<'a> FnMut(&Self::Item<'a>) -> bool,
+  {
+    self.transform(|source| Every { source, predicate })
+  }
+
+  /// Drop every item and mirror only the terminal notification
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter([1, 2, 3])
+  ///   .ignore_elements()
+  ///   .on_complete(|| println!("done"))
+  ///   .subscribe(|_| unreachable!());
+  /// ```
+  #[doc(alias = "ignoreElements")]
+  fn ignore_elements(self) -> Self::With<IgnoreElements<Self::Inner>> {
+    self.transform(|source| IgnoreElements { source })
+  }
+
+  /// Emit whether the source completed without emitting any item
+  ///
+  /// Emits `false` and completes on the first item, unsubscribing the
+  /// source; emits `true` when an empty source completes.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let observable = Local::from_iter([1, 2, 3]).is_empty();
+  /// // Emits: false
+  /// ```
+  #[doc(alias = "isEmpty")]
+  #[allow(clippy::wrong_self_convention)]
+  fn is_empty(self) -> Self::With<IsEmpty<Self::Inner>> {
+    self.transform(|source| IsEmpty { source })
+  }
+
   /// Emit values while a predicate returns true
   ///
   /// This operator emits values from the source observable as long as the
@@ -834,6 +978,30 @@ pub trait Observable: Context {
     S2: Observable<Inner: ObservableType<Item<'a> = Self::Item<'a>, Err = Self::Err>> + 'a,
   {
     self.transform(|core| Merge { source1: core, source2: other.into_inner() })
+  }
+
+  /// Mirror whichever of two observables emits first
+  ///
+  /// Both are subscribed; the first to emit an item, error, or completion
+  /// wins and the other is unsubscribed.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter([1, 2])
+  ///   .race(Local::from_iter([3, 4]))
+  ///   .subscribe(|v| println!("{}", v));
+  /// // Prints: 1, 2
+  /// ```
+  #[doc(alias = "raceWith")]
+  fn race<'a, S2>(self, other: S2) -> Self::With<Race<Self::Inner, S2::Inner>>
+  where
+    Self: 'a,
+    S2: Observable<Inner: ObservableType<Item<'a> = Self::Item<'a>, Err = Self::Err>> + 'a,
+  {
+    self.transform(|source_a| Race { source_a, source_b: other.into_inner() })
   }
 
   /// Combine the latest values from two observables
@@ -1438,6 +1606,79 @@ pub trait Observable: Context {
     self.transform(|source| Finalize { source, func: f })
   }
 
+  /// Emit every event as a [`Notification`] item and complete afterwards
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter([1])
+  ///   .materialize()
+  ///   .subscribe(|n| println!("{:?}", n));
+  /// // Prints: Next(1), Complete
+  /// ```
+  fn materialize(self) -> Self::With<Materialize<Self::Inner>> {
+    self.transform(|source| Materialize { source })
+  }
+
+  /// Replay [`Notification`] items as real events
+  ///
+  /// The source must be infallible. Stops at the first `Error` or
+  /// `Complete` notification.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter(vec![Notification::<i32, String>::Next(1), Notification::Complete])
+  ///   .dematerialize()
+  ///   .on_error(|e| println!("error: {}", e))
+  ///   .subscribe(|v| println!("{}", v));
+  /// // Prints: 1
+  /// ```
+  fn dematerialize<Item, Err>(self) -> Self::With<Dematerialize<Self::Inner, Item, Err>>
+  where
+    Self: Observable<Err = std::convert::Infallible>,
+    for<'a> Self::Item<'a>: Into<Notification<Item, Err>>,
+  {
+    self.transform(Dematerialize::new)
+  }
+
+  /// Wrap each item with the [`Instant`] it was emitted
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter([1])
+  ///   .timestamp()
+  ///   .subscribe(|t| println!("{} at {:?}", t.value, t.timestamp));
+  /// ```
+  fn timestamp(self) -> Self::With<Timestamp<Self::Inner>> {
+    self.transform(|source| Timestamp { source })
+  }
+
+  /// Wrap each item with the time elapsed since the previous emission
+  ///
+  /// The first item measures from subscription.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter([1])
+  ///   .time_interval()
+  ///   .subscribe(|e| println!("{} after {:?}", e.value, e.interval));
+  /// ```
+  #[doc(alias = "timeInterval")]
+  fn time_interval(self) -> Self::With<TimeInterval<Self::Inner>> {
+    self.transform(|source| TimeInterval { source })
+  }
+
   /// Emit specified values before beginning to emit source values
   ///
   /// The `start_with` operator prepends the provided values to the source
@@ -1460,6 +1701,26 @@ pub trait Observable: Context {
   /// ```
   fn start_with<Item>(self, values: Vec<Item>) -> Self::With<StartWith<Self::Inner, Item>> {
     self.transform(|source| StartWith { source, values })
+  }
+
+  /// Emit `values` after the source completes, then complete
+  ///
+  /// Mirror of [`Observable::start_with`]. The values are not emitted if the
+  /// source errors.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter([1, 2])
+  ///   .end_with(vec![3])
+  ///   .subscribe(|v| println!("{}", v));
+  /// // Prints: 1, 2, 3
+  /// ```
+  #[doc(alias = "endWith")]
+  fn end_with<Item>(self, values: Vec<Item>) -> Self::With<EndWith<Self::Inner, Item>> {
+    self.transform(|source| EndWith { source, values })
   }
 
   /// Emit a default value if the observable completes without emitting any
@@ -1488,6 +1749,28 @@ pub trait Observable: Context {
     self, default_value: Self::Item<'a>,
   ) -> Self::With<DefaultIfEmpty<Self::Inner, Self::Item<'a>>> {
     self.transform(|source| DefaultIfEmpty::new(source, default_value))
+  }
+
+  /// Error with `error_fn()` instead of completing when the source is empty
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter(std::iter::empty::<i32>())
+  ///   .map_err(|_: std::convert::Infallible| String::new())
+  ///   .throw_if_empty(|| "nothing".to_string())
+  ///   .on_error(|e| println!("{}", e))
+  ///   .subscribe(|_| {});
+  /// // Prints: nothing
+  /// ```
+  #[doc(alias = "throwIfEmpty")]
+  fn throw_if_empty<F>(self, error_fn: F) -> Self::With<ThrowIfEmpty<Self::Inner, F>>
+  where
+    F: FnOnce() -> Self::Err,
+  {
+    self.transform(|source| ThrowIfEmpty { source, error_fn })
   }
 
   /// Collect all emitted items into a collection

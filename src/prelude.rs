@@ -18,7 +18,10 @@ pub use crate::observable::{
 // Observer trait
 pub use crate::observer::Observer;
 // Operators
-pub use crate::ops::{into_future::*, into_stream::*};
+pub use crate::ops::{
+  into_future::*, into_stream::*, materialize::Notification, time_interval::Elapsed,
+  timestamp::Timestamped,
+};
 // Test Scheduler
 #[cfg(test)]
 pub use crate::scheduler::test_scheduler::TestScheduler;

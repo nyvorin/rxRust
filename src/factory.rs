@@ -1048,6 +1048,133 @@ pub trait ObservableFactory: Context<Inner = ()> {
       concurrent: 1, // Sequential execution
     })
   }
+
+  /// Mirror whichever of many observables emits first.
+  ///
+  /// Subscribes in order; the first to emit an item, error, or completion
+  /// wins and the rest are unsubscribed (or never subscribed). An empty
+  /// iterator completes immediately.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::race_observables([Local::from_iter(vec![1, 2]), Local::from_iter(vec![3])])
+  ///   .subscribe(|v| println!("Got: {}", v));
+  /// // Prints: 1, 2
+  /// ```
+  ///
+  /// # See Also
+  ///
+  /// * [`Observable::race`] - Binary instance method
+  #[doc(alias = "race")]
+  fn race_observables<O, I>(observables: I) -> Self::With<crate::ops::race_all::RaceAll<O>>
+  where
+    O: ObservableType,
+    I: IntoIterator<Item = Self::With<O>>,
+  {
+    let sources = observables
+      .into_iter()
+      .map(Context::into_inner)
+      .collect();
+    Self::lift(crate::ops::race_all::RaceAll { sources })
+  }
+
+  /// Wait for every observable to complete, then emit their last values.
+  ///
+  /// Emits one `Vec` of last values in input order and completes. If any
+  /// source completes without emitting, completes without a value. Errors
+  /// are forwarded immediately. An empty iterator completes immediately.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::fork_join_observables([Local::from_iter(vec![1, 2]), Local::from_iter(vec![3])])
+  ///   .subscribe(|v| println!("{:?}", v));
+  /// // Prints: [2, 3]
+  /// ```
+  #[doc(alias = "forkJoin")]
+  fn fork_join_observables<O, I>(observables: I) -> Self::With<crate::ops::fork_join::ForkJoin<O>>
+  where
+    O: ObservableType,
+    I: IntoIterator<Item = Self::With<O>>,
+  {
+    let sources = observables
+      .into_iter()
+      .map(Context::into_inner)
+      .collect();
+    Self::lift(crate::ops::fork_join::ForkJoin { sources })
+  }
+
+  /// Combine the latest values of many observables.
+  ///
+  /// Once every source has emitted, each new item emits a `Vec` of the
+  /// latest value from every source in input order. Items must be `Clone`.
+  /// Completes when all sources complete, or as soon as one completes
+  /// without emitting. An empty iterator completes immediately.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::combine_latest_observables([Local::from_iter(vec![1, 2]), Local::from_iter(vec![3])])
+  ///   .subscribe(|v| println!("{:?}", v));
+  /// // Prints: [2, 3]
+  /// ```
+  ///
+  /// # See Also
+  ///
+  /// * [`Observable::combine_latest`] - Binary instance method with a combiner
+  #[doc(alias = "combineLatest")]
+  fn combine_latest_observables<O, I>(
+    observables: I,
+  ) -> Self::With<crate::ops::combine_latest_all::CombineLatestAll<O>>
+  where
+    O: ObservableType,
+    I: IntoIterator<Item = Self::With<O>>,
+  {
+    let sources = observables
+      .into_iter()
+      .map(Context::into_inner)
+      .collect();
+    Self::lift(crate::ops::combine_latest_all::CombineLatestAll { sources })
+  }
+
+  /// Zip many observables, emitting the nth item of each as one `Vec`.
+  ///
+  /// Completes as soon as a completed source has no buffered item left,
+  /// because no further row can be formed. An empty iterator completes
+  /// immediately.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::zip_observables([Local::from_iter(vec![1, 2, 3]), Local::from_iter(vec![10, 20])])
+  ///   .subscribe(|v| println!("{:?}", v));
+  /// // Prints: [1, 10], [2, 20]
+  /// ```
+  ///
+  /// # See Also
+  ///
+  /// * [`Observable::zip`] - Binary instance method emitting tuples
+  #[doc(alias = "zip")]
+  fn zip_observables<O, I>(observables: I) -> Self::With<crate::ops::zip_all::ZipAll<O>>
+  where
+    O: ObservableType,
+    I: IntoIterator<Item = Self::With<O>>,
+  {
+    let sources = observables
+      .into_iter()
+      .map(Context::into_inner)
+      .collect();
+    Self::lift(crate::ops::zip_all::ZipAll { sources })
+  }
 }
 
 // Blanket implementation: Any `Context<Inner = ()>`, reuires `Inner = ()` to

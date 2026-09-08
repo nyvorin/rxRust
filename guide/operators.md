@@ -83,6 +83,11 @@ Operators that selectively emit items from the source Observable.
 | `sample` | Emits the most recent item when another Observable emits. |
 | `last` | Emits only the last item. |
 | `contains` | Emits true if the Observable emits a specific item. |
+| `every` | Emits `true` if every item satisfies a predicate, `false` on the first that does not. |
+| `is_empty` | Emits `true` if the source completes without items. |
+| `find` / `find_index` | Emits the first item (or its index) matching a predicate. |
+| `element_at` / `element_at_or` | Emits the item at a zero-based index, with an optional default. |
+| `ignore_elements` | Drops every item, mirrors only error and completion. |
 
 ### Combination Operators
 
@@ -97,6 +102,11 @@ Operators that work with multiple source Observables to create a single Observab
 | `start_with` | Emits a sequence of items before beginning to emit the items from the source. |
 | `merge_all` | Flattens a Higher-Order Observable by merging inner Observables. |
 | `concat_all` | Flattens a Higher-Order Observable by concatenating inner Observables sequentially. |
+| `race` / `race_observables` | Mirrors the first source to emit; the others are unsubscribed. |
+| `fork_join_observables` | Emits the last value of every source once all complete. |
+| `combine_latest_observables` | N-ary `combine_latest` emitting a `Vec` snapshot. |
+| `zip_observables` | N-ary `zip` emitting a `Vec` row. |
+| `end_with` | Emits given values after the source completes. |
 
 ### Utility Operators
 
@@ -114,3 +124,7 @@ Operators for observing, timing, and error handling.
 | `map_err` | Transforms the error type. |
 | `on_error` | Performs a side effect if an error occurs. |
 | `on_complete` | Performs a side effect if the Observable completes. |
+| `materialize` / `dematerialize` | Converts events to `Notification` items and back. |
+| `timestamp` | Wraps each item with the `Instant` it was emitted. |
+| `time_interval` | Wraps each item with the time since the previous emission. |
+| `throw_if_empty` | Errors instead of completing when the source is empty. |

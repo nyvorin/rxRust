@@ -34,6 +34,7 @@ Welcome to rxRust v1.0! This release represents a complete reimplementation of t
     *   **Utility**: `retry`, `tap`, `delay`, `observe_on`, `subscribe_on`.
 *   **WASM Support**: First-class support for WebAssembly via `Local` context, enabling high-performance reactive web apps.
 *   **Subject Improvements**: `Subject` and `BehaviorSubject` now support "Multicasting" and adapt their internal locking strategy based on the Context they are created in.
+*   **RxJS Parity, Tier 1a**: `every`, `ignore_elements`, `is_empty`, `element_at`, `element_at_or`, `find`, `find_index`, `end_with`, `throw_if_empty`, `materialize`, `dematerialize`, `timestamp`, `time_interval`, `race`, and the N-ary factories `race_observables`, `fork_join_observables`, `combine_latest_observables`, `zip_observables`.
 
 ### 🛠️ Advanced Capabilities
 

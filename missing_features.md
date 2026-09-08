@@ -47,6 +47,8 @@ Operators that transform items that are emitted by an Observable.
 - [x] GroupBy — divide an Observable into a set of Observables that each emit a different group of items from the original Observable, organized by key
 - [x] Map — transform the items emitted by an Observable by applying a function to each item
 - [x] Scan — apply a function to each item emitted by an Observable, sequentially, and emit each successive value
+- [x] Materialize/Dematerialize — represent both the items emitted and the notifications sent as emitted items, or reverse this process
+  - `materialize` emits `Notification<Item, Err>`; `dematerialize` replays them
 - [ ] Window — periodically subdivide items from an Observable into Observable windows and emit these windows rather than emitting the items one at a time
 
 ### Filtering Observables
@@ -60,12 +62,12 @@ Operators that selectively emit items from a source Observable.
 - [x] Distinct — suppress duplicate items emitted by an Observable
   - [x] DistinctUntilChanged — only emit when the current value is different than the last
 - [x] ElementAt — emit only item n emitted by an Observable
-  - via `take(n+1).last()` or specific op. Original list checked it.
+  - implemented as `element_at` / `element_at_or`
 - [x] Filter — emit only those items from an Observable that pass a predicate test
 - [x] First — emit only the first item, or the first item that meets a condition, from an Observable
-  - via `take(1)`
+  - `first`, `first_or`, `find`, `find_index`
 - [x] IgnoreElements — do not emit any items from an Observable but mirror its termination notification
-  - via `filter(|_| false)` or `ignore_elements` (impl in `finalize` or similar?)
+  - implemented as `ignore_elements`
 - [x] Last — emit only the last item emitted by an Observable
 - [x] Sample — emit the most recent item emitted by an Observable within periodic time intervals
 - [x] Skip — suppress the first n items emitted by an Observable
@@ -81,14 +83,20 @@ Operators that work with multiple source Observables to create a single Observab
 
 - [ ] And/Then/When — combine sets of items emitted by two or more Observables by means of Pattern and Plan intermediaries
 - [x] CombineLatest — when an item is emitted by either of two Observables, combine the latest item emitted by each Observable via a specified function and emit items based on the results of this function
+  - N-ary: `combine_latest_observables`
+- [x] ForkJoin — wait for all Observables to complete, then emit their last values (`fork_join_observables`)
 - [ ] Join — combine items emitted by two Observables whenever an item from one Observable is emitted during a time window defined according to an item emitted by the other Observable
 - [x] Merge — combine multiple Observables into one by merging their emissions
+- [x] Race/Amb — mirror the first of several Observables to emit
+  - `race` (binary), `race_observables` (N-ary)
 - [x] StartWith — emit a specified sequence of items before beginning to emit the items from the source Observable
+- [x] EndWith — emit a specified sequence of items after the source Observable completes (`end_with`)
 - [x] Switch — convert an Observable that emits Observables into a single Observable that emits the items emitted by the most-recently-emitted of those Observables
   - available via `switch_map(|x| x)` (aka switchAll)
 - [x] SwitchMap — map each item into an inner Observable and switch to the latest one
 - [x] WithLatestFrom - similar to CombineLatest, but only emits items when the single source Observable emits an item
 - [x] Zip — combine the emissions of multiple Observables together via a specified function and emit single items for each combination based on the results of this function
+  - N-ary: `zip_observables`
 
 ### Error Handling Operators
 
@@ -106,14 +114,15 @@ A toolbox of useful Operators for working with Observables
 - [x] Delay — shift the emissions from an Observable forward in time by a particular amount
 - [x] Do — register an action to take upon a variety of Observable lifecycle events
   - named `tap`
-- [ ] Materialize/Dematerialize — represent both the items emitted and the notifications sent as emitted items, or reverse this process
 - [x] ObserveOn — specify the scheduler on which an observer will observe this Observable
 - [ ] Serialize — force an Observable to make serialized calls and to be well-behaved
 - [x] Subscribe — operate upon the emissions and notifications from an Observable
 - [x] SubscribeOn — specify the scheduler an Observable should use when it is subscribed to
-- [ ] TimeInterval — convert an Observable that emits items into one that emits indications of the amount of time elapsed between those emissions
+- [x] TimeInterval — convert an Observable that emits items into one that emits indications of the amount of time elapsed between those emissions
+  - implemented as `time_interval`, emits `Elapsed { value, interval }`
 - [ ] Timeout — mirror the source Observable, but issue an error notification if a particular period of time elapses without any emitted items
-- [ ] Timestamp — attach a timestamp to each item emitted by an Observable
+- [x] Timestamp — attach a timestamp to each item emitted by an Observable
+  - implemented as `timestamp`, emits `Timestamped { value, timestamp }`
 - [ ] Using — create a disposable resource that has the same lifespan as the Observable
 
 ### Conditional and Boolean Operators
@@ -121,10 +130,13 @@ A toolbox of useful Operators for working with Observables
 Operators that evaluate one or more Observables or items emitted by Observables
 
 - [x] All — determine whether all items emitted by an Observable meet some criteria
-  - `every` or `all`
-- [ ] Amb — given two or more source Observables, emit all of the items from only the first of these Observables to emit an item
+  - implemented as `every` (doc alias `all`)
+- [x] Amb — given two or more source Observables, emit all of the items from only the first of these Observables to emit an item
+  - see Race above
 - [x] Contains — determine whether an Observable emits a particular item or not
 - [x] DefaultIfEmpty — emit items from the source Observable, or a default item if the source Observable emits nothing
+- [x] ThrowIfEmpty — error instead of completing when the source Observable emits nothing (`throw_if_empty`)
+- [x] IsEmpty — emit whether the source Observable completed without items (`is_empty`)
 - [ ] SequenceEqual — determine whether two Observables emit the same sequence of items
 - [x] SkipUntil — discard items emitted by an Observable until a second Observable emits an item
 - [x] SkipWhile — discard items emitted by an Observable until a specified condition becomes false
