@@ -38,7 +38,7 @@
 
 Add to `src/ops/window.rs`: `pub type WindowSubjectOf<'a, O> = <O as Context>::With<PublishSubjectOf<'a, O>>;` and `pub type WindowTimer<Sch, Err> = MapErr<Interval<Sch>, fn(Infallible) -> Err>;`. Register `Window`, `WindowCount`, `WindowSubjectOf`, `WindowTimer`, `never_errors`, plus `Interval` and `MapErr` (already imported) in `src/observable.rs`.
 
-- [ ] **Step 1: Operator file(s)**
+- [x] **Step 1: Operator file(s)**
 
 `window.rs`:
 
@@ -562,7 +562,7 @@ where
 }
 ```
 
-- [ ] **Step 2: Trait methods**
+- [x] **Step 2: Trait methods**
 
 ```rust
   /// Split the source into consecutive windows delimited by `notifier`
@@ -658,7 +658,7 @@ where
   }
 ```
 
-- [ ] **Step 3:** `lib_tests ops::window and ops::window_count`, `doc_tests window`, gate, commit `feat(ops.window): ...`.
+- [x] **Step 3:** `lib_tests ops::window and ops::window_count`, `doc_tests window`, gate, commit `feat(ops.window): ...`.
 
 ---
 
@@ -666,7 +666,7 @@ where
 
 **Files:** src/ops/buffer_when.rs, src/ops/buffer_toggle.rs; methods after `buffer_time_max_with`.
 
-- [ ] **Step 1: Operator file(s)**
+- [x] **Step 1: Operator file(s)**
 
 `buffer_when.rs`:
 
@@ -1369,7 +1369,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Trait methods**
+- [x] **Step 2: Trait methods**
 
 ```rust
   /// Buffer items until the observable returned by `closing_selector` emits,
@@ -1429,7 +1429,7 @@ mod tests {
   }
 ```
 
-- [ ] **Step 3:** `lib_tests ops::buffer_when and ops::buffer_toggle`, `doc_tests buffer_when`, gate, commit `feat(ops.buffer_when): ...`.
+- [x] **Step 3:** `lib_tests ops::buffer_when and ops::buffer_toggle`, `doc_tests buffer_when`, gate, commit `feat(ops.buffer_when): ...`.
 
 ---
 
@@ -1437,7 +1437,7 @@ mod tests {
 
 **Files:** src/ops/delay_when.rs; method after `delay_subscription_with`.
 
-- [ ] **Step 1: Operator file(s)**
+- [x] **Step 1: Operator file(s)**
 
 `delay_when.rs`:
 
@@ -1741,7 +1741,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Trait methods**
+- [x] **Step 2: Trait methods**
 
 ```rust
   /// Delay each item until the observable returned by `selector(&item)`
@@ -1772,7 +1772,7 @@ mod tests {
   }
 ```
 
-- [ ] **Step 3:** `lib_tests ops::delay_when`, `doc_tests delay_when`, gate, commit `feat(ops.delay_when): ...`.
+- [x] **Step 3:** `lib_tests ops::delay_when`, `doc_tests delay_when`, gate, commit `feat(ops.delay_when): ...`.
 
 ---
 
@@ -1780,7 +1780,7 @@ mod tests {
 
 **Files:** src/ops/merge_scan.rs; method after `scan_map`.
 
-- [ ] **Step 1: Operator file(s)**
+- [x] **Step 1: Operator file(s)**
 
 `merge_scan.rs`:
 
@@ -2079,7 +2079,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Trait methods**
+- [x] **Step 2: Trait methods**
 
 ```rust
   /// Accumulate through observables: `f(acc, item)` returns an observable
@@ -2106,7 +2106,7 @@ mod tests {
   }
 ```
 
-- [ ] **Step 3:** `lib_tests ops::merge_scan`, `doc_tests merge_scan`, gate, commit `feat(ops.merge_scan): ...`.
+- [x] **Step 3:** `lib_tests ops::merge_scan`, `doc_tests merge_scan`, gate, commit `feat(ops.merge_scan): ...`.
 
 ---
 
@@ -2114,7 +2114,7 @@ mod tests {
 
 **Files:** src/ops/expand.rs; method after `exhaust_map`.
 
-- [ ] **Step 1: Operator file(s)**
+- [x] **Step 1: Operator file(s)**
 
 `expand.rs`:
 
@@ -2399,7 +2399,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Trait methods**
+- [x] **Step 2: Trait methods**
 
 ```rust
   /// Recursively project every emitted item through `f` and merge the results
@@ -2425,7 +2425,7 @@ mod tests {
   }
 ```
 
-- [ ] **Step 3:** `lib_tests ops::expand`, `doc_tests expand`, gate, commit `feat(ops.expand): ...`.
+- [x] **Step 3:** `lib_tests ops::expand`, `doc_tests expand`, gate, commit `feat(ops.expand): ...`.
 
 ---
 
