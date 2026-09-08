@@ -40,10 +40,12 @@ pub use trivial::*;
 // Internal imports (avoid circular dependency with prelude)
 use crate::context::Context;
 use crate::ops::{
+  audit::{Audit, AuditTime},
   average::{Average, Averageable},
   buffer::Buffer, // Restored
   buffer_count::BufferCount,
   buffer_time::BufferTime,
+  catch_error::CatchError,
   collect::Collect,
   combine_latest::CombineLatest,
   contains::Contains,
@@ -55,6 +57,7 @@ use crate::ops::{
   element_at::{ElementAt, ElementAtOr},
   end_with::EndWith,
   every::Every,
+  exhaust_map::ExhaustMap,
   filter::Filter,
   filter_map::FilterMap,
   finalize::Finalize,
@@ -77,6 +80,8 @@ use crate::ops::{
   pairwise::Pairwise,
   race::Race,
   reduce::{Reduce, ReduceFn, ReduceInitialFn},
+  ref_count::{PublishSubjectOf, RefCount, ShareOf, ShareReplayOf},
+  repeat::Repeat,
   retry::{Retry, RetryPolicy},
   sample::Sample,
   scan::Scan,
@@ -96,6 +101,7 @@ use crate::ops::{
   throttle::{Throttle, ThrottleEdge, ThrottleWhenParam},
   throw_if_empty::ThrowIfEmpty,
   time_interval::TimeInterval,
+  timeout::{Timeout, TimeoutError, default_timeout_error},
   timestamp::Timestamp,
   with_latest_from::WithLatestFrom,
   zip::Zip,
@@ -103,7 +109,9 @@ use crate::ops::{
 use crate::{
   observer::FnMutObserver,
   scheduler::{Duration, Instant},
-  subject::{Subject, SubjectPtr, SubjectPtrMutRef},
+  subject::{
+    AsyncSubjectOf, BehaviorSubjectOf, ReplaySubjectOf, Subject, SubjectPtr, SubjectPtrMutRef,
+  },
   subscription::Subscription,
 };
 
@@ -1194,6 +1202,32 @@ pub trait Observable: Context {
     self.transform(|source| MapErr { source, func: f })
   }
 
+  /// Recover from an error by continuing with the observable returned by
+  /// `handler`
+  ///
+  /// The fallback's items must match; its error type becomes the output
+  /// error type.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::throw_err("boom".to_string())
+  ///   .map(|_| 0)
+  ///   .catch_error(|_: String| Local::of(-1))
+  ///   .subscribe(|v| println!("{}", v));
+  /// // Prints: -1
+  /// ```
+  #[doc(alias = "catchError")]
+  fn catch_error<F, Out>(self, handler: F) -> Self::With<CatchError<Self::Inner, F>>
+  where
+    F: FnMut(Self::Err) -> Out,
+    Out: Context<Inner: ObservableType>,
+  {
+    self.transform(|source| CatchError { source, handler })
+  }
+
   /// Execute a callback when the stream completes
   ///
   /// This operator allows reacting to completion events for side effects.
@@ -1298,6 +1332,79 @@ pub trait Observable: Context {
     self.transform(|core| Debounce { source: core, duration, scheduler })
   }
 
+  /// Error with `TimeoutError` if the source is silent for `duration`
+  ///
+  /// The timer restarts after every item. Requires `Err: From<TimeoutError>`.
+  ///
+  /// # Examples
+  ///
+  /// ```rust,no_run
+  /// # #[cfg(not(target_arch = "wasm32"))]
+  /// # {
+  /// use rxrust::prelude::*;
+  ///
+  /// # #[tokio::main(flavor = "local")]
+  /// # async fn main() {
+  /// Local::never()
+  ///   .map_to(0)
+  ///   .map_err(|_: std::convert::Infallible| TimeoutError)
+  ///   .timeout(Duration::from_millis(50))
+  ///   .on_error(|e| println!("{}", e))
+  ///   .subscribe(|_| {});
+  /// # }
+  /// # }
+  /// ```
+  #[allow(clippy::type_complexity)]
+  fn timeout(
+    self, duration: Duration,
+  ) -> Self::With<Timeout<Self::Inner, Self::Scheduler, fn() -> Self::Err>>
+  where
+    Self::Err: From<TimeoutError>,
+  {
+    let scheduler = self.scheduler().clone();
+    self.timeout_or_else_with(
+      duration,
+      default_timeout_error::<Self::Err> as fn() -> Self::Err,
+      scheduler,
+    )
+  }
+
+  /// [`Observable::timeout`] with an explicit scheduler
+  #[allow(clippy::type_complexity)]
+  fn timeout_with<Sch>(
+    self, duration: Duration, scheduler: Sch,
+  ) -> Self::With<Timeout<Self::Inner, Sch, fn() -> Self::Err>>
+  where
+    Self::Err: From<TimeoutError>,
+  {
+    self.timeout_or_else_with(
+      duration,
+      default_timeout_error::<Self::Err> as fn() -> Self::Err,
+      scheduler,
+    )
+  }
+
+  /// Error with `error_fn()` if the source is silent for `duration`
+  fn timeout_or_else<F>(
+    self, duration: Duration, error_fn: F,
+  ) -> Self::With<Timeout<Self::Inner, Self::Scheduler, F>>
+  where
+    F: FnOnce() -> Self::Err,
+  {
+    let scheduler = self.scheduler().clone();
+    self.timeout_or_else_with(duration, error_fn, scheduler)
+  }
+
+  /// [`Observable::timeout_or_else`] with an explicit scheduler
+  fn timeout_or_else_with<F, Sch>(
+    self, duration: Duration, error_fn: F, scheduler: Sch,
+  ) -> Self::With<Timeout<Self::Inner, Sch, F>>
+  where
+    F: FnOnce() -> Self::Err,
+  {
+    self.transform(|source| Timeout { source, duration, scheduler, error_fn })
+  }
+
   /// Re-emits all notifications from this Observable on the specified
   /// Scheduler.
   ///
@@ -1397,6 +1504,19 @@ pub trait Observable: Context {
     self.transform(|source| Retry { source, policy })
   }
 
+  /// Resubscribe to the source on completion, `count` times in total
+  ///
+  /// `repeat(0)` completes immediately and `repeat(1)` is transparent. Each
+  /// resubscription runs on the scheduler's next tick.
+  fn repeat(self, count: usize) -> Self::With<Repeat<Self::Inner>> {
+    self.transform(|source| Repeat { source, count: Some(count) })
+  }
+
+  /// Resubscribe to the source on completion until unsubscribed
+  fn repeat_forever(self) -> Self::With<Repeat<Self::Inner>> {
+    self.transform(|source| Repeat { source, count: None })
+  }
+
   /// Throttle emissions by ignoring values during a window
   ///
   /// Each emitted value starts a throttle window. While the
@@ -1483,6 +1603,58 @@ pub trait Observable: Context {
       param: Self::With::from_parts(duration, scheduler),
       edge,
     })
+  }
+
+  /// Emit the most recent item when the observable returned by `selector`
+  /// emits, then wait for the next item to start a new window
+  ///
+  /// Equivalent to `throttle(selector, ThrottleEdge::trailing())`.
+  fn audit<F, Out>(self, selector: F) -> Self::With<Audit<Self::Inner, F>>
+  where
+    F: for<'a> FnMut(&Self::Item<'a>) -> Out,
+    Out: Observable<Err = Self::Err>,
+  {
+    self.throttle(selector, ThrottleEdge::trailing())
+  }
+
+  /// Emit the most recent item once `duration` has passed since the first
+  /// item of the window
+  ///
+  /// Equivalent to `throttle_time(duration, ThrottleEdge::trailing())`.
+  ///
+  /// # Examples
+  ///
+  /// ```rust,no_run
+  /// # #[cfg(not(target_arch = "wasm32"))]
+  /// # {
+  /// use rxrust::prelude::*;
+  ///
+  /// # #[tokio::main(flavor = "local")]
+  /// # async fn main() {
+  /// Local::interval(Duration::from_millis(10))
+  ///   .audit_time(Duration::from_millis(100))
+  ///   .subscribe(|v| println!("latest in window: {}", v));
+  /// # }
+  /// # }
+  /// ```
+  #[doc(alias = "auditTime")]
+  fn audit_time(
+    self, duration: Duration,
+  ) -> Self::With<AuditTime<Self::Inner, Self::With<Duration>>>
+  where
+    Self::With<Duration>: Context<Scheduler = Self::Scheduler>,
+  {
+    self.throttle_time(duration, ThrottleEdge::trailing())
+  }
+
+  /// [`Observable::audit_time`] with an explicit scheduler
+  fn audit_time_with<Sch>(
+    self, duration: Duration, scheduler: Sch,
+  ) -> Self::With<AuditTime<Self::Inner, Self::With<Duration>>>
+  where
+    Self::With<Duration>: Context<Scheduler = Sch>,
+  {
+    self.throttle_time_with(duration, ThrottleEdge::trailing(), scheduler)
   }
 
   /// Emit the most recently emitted value when a sampler Observable emits
@@ -2042,9 +2214,7 @@ pub trait Observable: Context {
   /// // Later, disconnect to stop multicasting
   /// connection.unsubscribe();
   /// ```
-  fn multicast<'a>(
-    self, subject: Subject<SubjectPtr<'a, Self, Self::Item<'a>, Self::Err>>,
-  ) -> ConnectableObservableCtx<'a, Self> {
+  fn multicast<Sub>(self, subject: Sub) -> Self::With<ConnectableObservable<Self::Inner, Sub>> {
     self.transform(|source| ConnectableObservable { source, subject })
   }
 
@@ -2150,7 +2320,101 @@ pub trait Observable: Context {
   /// // Later, disconnect to stop multicasting
   /// connection.unsubscribe();
   /// ```
-  fn publish<'a>(self) -> ConnectableObservableCtx<'a, Self> { self.multicast(Subject::default()) }
+  fn publish<'a>(self) -> ConnectableObservableCtx<'a, Self> {
+    self.multicast(PublishSubjectOf::<'a, Self>::default())
+  }
+
+  /// Multicast through a `ReplaySubject` holding the last `capacity` items
+  ///
+  /// Late subscribers receive the buffered items (and any terminal event)
+  /// before live ones. Call `connect()` or use [`Observable::share_replay`].
+  #[doc(alias = "publishReplay")]
+  fn publish_replay<'a>(
+    self, capacity: usize,
+  ) -> Self::With<ConnectableObservable<Self::Inner, ReplaySubjectOf<'a, Self>>> {
+    self.multicast(ReplaySubjectOf::<'a, Self>::new(Some(capacity)))
+  }
+
+  /// `publish_replay(capacity)` with reference counting
+  ///
+  /// The source is connected while at least one subscriber is present, late
+  /// subscribers see the last `capacity` items, and once the source
+  /// terminates late subscribers receive the buffer and the terminal event
+  /// without reconnecting.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let shared = Local::from_iter(vec![1, 2, 3]).share_replay(2);
+  /// shared
+  ///   .clone()
+  ///   .subscribe(|v| println!("first: {}", v));
+  /// shared.subscribe(|v| println!("late: {}", v)); // late: 2, late: 3
+  /// ```
+  #[doc(alias = "shareReplay")]
+  fn share_replay<'a>(self, capacity: usize) -> ShareReplayOf<'a, Self>
+  where
+    Self::Inner: CoreObservable<Self::With<ReplaySubjectOf<'a, Self>>>,
+  {
+    let connection = Self::RcMut::from(None);
+    self.transform(|source| RefCount {
+      connectable: ConnectableObservable {
+        source,
+        subject: ReplaySubjectOf::<'a, Self>::new(Some(capacity)),
+      },
+      connection,
+    })
+  }
+
+  /// Multicast through an `AsyncSubject`: subscribers receive only the
+  /// source's last value, when it completes
+  #[doc(alias = "publishLast")]
+  fn publish_last<'a>(
+    self,
+  ) -> Self::With<ConnectableObservable<Self::Inner, AsyncSubjectOf<'a, Self>>> {
+    self.multicast(AsyncSubjectOf::<'a, Self>::default())
+  }
+
+  /// Multicast through a `BehaviorSubject` seeded with `initial`
+  #[doc(alias = "publishBehavior")]
+  fn publish_behavior<'a>(
+    self, initial: Self::Item<'a>,
+  ) -> Self::With<ConnectableObservable<Self::Inner, BehaviorSubjectOf<'a, Self>>>
+  where
+    Self::Item<'a>: Clone,
+  {
+    self.multicast(BehaviorSubjectOf::<'a, Self>::new(initial))
+  }
+
+  /// Multicast through a plain `Subject`, connecting the source when the
+  /// first subscriber arrives and disconnecting when the last one leaves
+  ///
+  /// Equivalent to `publish().ref_count()`.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let shared = Local::from_iter(vec![1, 2]).share();
+  /// shared.clone().subscribe(|v| println!("A: {}", v));
+  /// shared.subscribe(|v| println!("B: {}", v));
+  /// ```
+  fn share<'a>(self) -> ShareOf<'a, Self>
+  where
+    Self::Inner: CoreObservable<Self::With<PublishSubjectOf<'a, Self>>>,
+  {
+    let connection = Self::RcMut::from(None);
+    self.transform(|source| RefCount {
+      connectable: ConnectableObservable {
+        source,
+        subject: PublishSubjectOf::<'a, Self>::default(),
+      },
+      connection,
+    })
+  }
 
   /// Convert this observable into a ConnectableObservable for mutable reference
   /// broadcasting
@@ -2198,9 +2462,7 @@ pub trait Observable: Context {
   /// connection.unsubscribe();
   /// ```
   #[allow(clippy::type_complexity)]
-  fn publish_mut_ref<'a, Item: 'a>(
-    self,
-  ) -> Self::With<ConnectableObservable<Self::Inner, SubjectPtrMutRef<'a, Self, Item, Self::Err>>>
+  fn publish_mut_ref<'a, Item: 'a>(self) -> ConnectableObservableCtxMutRef<'a, Self, Item>
   where
     Self: Observable<Item<'a> = &'a mut Item> + 'a,
   {
@@ -2749,18 +3011,36 @@ pub trait Observable: Context {
   {
     self.transform(|source| SwitchMap { source, func: f })
   }
+
+  /// Map each item to an inner observable, ignoring items that arrive while
+  /// an inner observable is still active
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter(vec![1, 2])
+  ///   .exhaust_map(|v| Local::of(v * 10))
+  ///   .subscribe(|v| println!("{}", v));
+  /// // Prints: 10, 20
+  /// ```
+  #[doc(alias = "exhaustMap")]
+  fn exhaust_map<F, Out>(self, f: F) -> Self::With<ExhaustMap<Self::Inner, F>>
+  where
+    F: for<'a> FnMut(Self::Item<'a>) -> Out,
+    Out: Context<Inner: ObservableType<Err = Self::Err> + 'static>,
+  {
+    self.transform(|source| ExhaustMap { source, func: f })
+  }
 }
 
-pub type ConnectableObservableCtx<'a, O> = <O as Context>::With<
-  ConnectableObservable<
-    <O as Context>::Inner,
-    SubjectPtr<'a, O, <O as Observable>::Item<'a>, <O as Observable>::Err>,
-  >,
->;
+pub type ConnectableObservableCtx<'a, O> =
+  <O as Context>::With<ConnectableObservable<<O as Context>::Inner, PublishSubjectOf<'a, O>>>;
 pub type ConnectableObservableCtxMutRef<'a, O, Item> = <O as Context>::With<
   ConnectableObservable<
     <O as Context>::Inner,
-    SubjectPtrMutRef<'a, O, Item, <O as Observable>::Err>,
+    Subject<SubjectPtrMutRef<'a, O, Item, <O as Observable>::Err>>,
   >,
 >;
 

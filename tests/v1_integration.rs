@@ -559,3 +559,34 @@ fn test_fork_join_feeds_every() {
 
   assert_eq!(*result.borrow(), vec![true]);
 }
+
+#[rxrust_macro::test]
+fn test_share_replay_feeds_two_subscribers() {
+  let a = Rc::new(RefCell::new(Vec::new()));
+  let b = Rc::new(RefCell::new(Vec::new()));
+  let a_c = a.clone();
+  let b_c = b.clone();
+
+  let shared = Local::from_iter(vec![1, 2, 3]).share_replay(1);
+  shared
+    .clone()
+    .subscribe(move |v| a_c.borrow_mut().push(v));
+  shared.subscribe(move |v| b_c.borrow_mut().push(v));
+
+  assert_eq!(*a.borrow(), vec![1, 2, 3]);
+  assert_eq!(*b.borrow(), vec![3]);
+}
+
+#[rxrust_macro::test]
+fn test_catch_error_after_throw_if_empty() {
+  let result = Rc::new(RefCell::new(Vec::new()));
+  let result_c = result.clone();
+
+  Local::from_iter(Vec::<i32>::new())
+    .map_err(|_: Infallible| String::new())
+    .throw_if_empty(|| "empty".to_string())
+    .catch_error(|e: String| Local::from_iter(vec![e.len() as i32]))
+    .subscribe(move |v| result_c.borrow_mut().push(v));
+
+  assert_eq!(*result.borrow(), vec![5]);
+}

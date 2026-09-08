@@ -20,7 +20,7 @@ pub use crate::observer::Observer;
 // Operators
 pub use crate::ops::{
   into_future::*, into_stream::*, materialize::Notification, time_interval::Elapsed,
-  timestamp::Timestamped,
+  timeout::TimeoutError, timestamp::Timestamped,
 };
 // Test Scheduler
 #[cfg(test)]

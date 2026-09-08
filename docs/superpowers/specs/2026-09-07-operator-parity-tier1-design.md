@@ -124,7 +124,7 @@ Maps each outer item to an inner observable. While an inner is active, outer ite
 
 ### `audit(selector)`, `audit_time(duration)`, `audit_time_with(duration, scheduler)`
 
-`audit` emits the most recent item when the duration observable returned by `selector` emits, then waits for the next item to start a new window. If the existing `throttle` with a trailing-only `ThrottleEdge` has exactly these semantics, `audit` is a thin wrapper over it; the tests below decide that. If throttle's trailing edge also emits a leading value, `audit` gets its own implementation. Tests: an item at t=0 with a 100ms audit emits that item, or a later one, at t=100; silence emits nothing; completion emits any pending item first.
+`audit` emits the most recent item when the duration observable returned by `selector` emits, then waits for the next item to start a new window. If the existing `throttle` with a trailing-only `ThrottleEdge` has exactly these semantics, `audit` is a thin wrapper over it; the tests below decide that. If throttle's trailing edge also emits a leading value, `audit` gets its own implementation. Tests: an item at t=0 with a 100ms audit emits that item, or a later one, at t=100; silence emits nothing; completion during an open window waits for the window to end, then emits the pending item and completes, as in RxJS.
 
 ## Documentation and bookkeeping
 

@@ -27,8 +27,8 @@ Operators that originate new Observables.
   - named `of`, `of_result`, `of_option` in rxRust
 - [x] Range — create an Observable that emits a range of sequential integers
   - use `from_iter` with a range
-- [ ] Repeat — create an Observable that emits a particular item or sequence of items repeatedly
-  - `repeat` is not explicitly implemented but can be achieved with `from_iter` or recursive scheduling, but a dedicated operator might be missing.
+- [x] Repeat — create an Observable that emits a particular item or sequence of items repeatedly
+  - implemented as `repeat(count)` / `repeat_forever()`, resubscribing on the scheduler's next tick
 - [x] Start — create an Observable that emits the return value of a function
   - `defer` or `from_fn` covers this.
 - [x] Timer — create an Observable that emits a single item after a given delay
@@ -44,6 +44,7 @@ Operators that transform items that are emitted by an Observable.
   - [x] `buffer_with_count_and_time`
 - [x] FlatMap — transform the items emitted by an Observable into Observables, then flatten the emissions from those into a single Observable
   - implemented as `merge_all` (flatten) or `map(...).merge_all(...)`
+  - [x] ExhaustMap — ignore outer items while an inner Observable is active (`exhaust_map`)
 - [x] GroupBy — divide an Observable into a set of Observables that each emit a different group of items from the original Observable, organized by key
 - [x] Map — transform the items emitted by an Observable by applying a function to each item
 - [x] Scan — apply a function to each item emitted by an Observable, sequentially, and emit each successive value
@@ -59,6 +60,7 @@ Operators that selectively emit items from a source Observable.
   - [x] Throttle
   - [x] ThrottleTime
   - [x] Debounce
+  - [x] Audit / AuditTime (`audit`, `audit_time`, `audit_time_with`)
 - [x] Distinct — suppress duplicate items emitted by an Observable
   - [x] DistinctUntilChanged — only emit when the current value is different than the last
 - [x] ElementAt — emit only item n emitted by an Observable
@@ -102,8 +104,8 @@ Operators that work with multiple source Observables to create a single Observab
 
 Operators that help to recover from error notifications from an Observable
 
-- [ ] Catch — recover from an onError notification by continuing the sequence without error
-  - `map_err` exists, but `catch_error` (switch to new observable on error) is missing.
+- [x] Catch — recover from an onError notification by continuing the sequence without error
+  - implemented as `catch_error`; `map_err` transforms the error type
 - [x] Retry — if a source Observable sends an onError notification, resubscribe to it in the hopes that it will complete without error
   - Implemented with generic policies (`count`, `delay`, `reset_on_success`).
 
@@ -120,7 +122,8 @@ A toolbox of useful Operators for working with Observables
 - [x] SubscribeOn — specify the scheduler an Observable should use when it is subscribed to
 - [x] TimeInterval — convert an Observable that emits items into one that emits indications of the amount of time elapsed between those emissions
   - implemented as `time_interval`, emits `Elapsed { value, interval }`
-- [ ] Timeout — mirror the source Observable, but issue an error notification if a particular period of time elapses without any emitted items
+- [x] Timeout — mirror the source Observable, but issue an error notification if a particular period of time elapses without any emitted items
+  - `timeout`, `timeout_with`, `timeout_or_else`, `timeout_or_else_with`; emits `TimeoutError` by default
 - [x] Timestamp — attach a timestamp to each item emitted by an Observable
   - implemented as `timestamp`, emits `Timestamped { value, timestamp }`
 - [ ] Using — create a disposable resource that has the same lifespan as the Observable
@@ -171,7 +174,10 @@ Specialty Observables that have more precisely-controlled subscription dynamics
 - [x] Connect — instruct a connectable Observable to begin emitting items to its subscribers
 - [x] Publish — convert an ordinary Observable into a connectable Observable
 - [x] RefCount — make a Connectable Observable behave like an ordinary Observable
-- [ ] Replay — ensure that all observers see the same sequence of emitted items, even if they subscribe after the Observable has begun emitting items
+- [x] Share — `publish().ref_count()` shortcut (`share`)
+- [x] PublishBehavior / PublishLast — multicast through a `BehaviorSubject` or `AsyncSubject` (`publish_behavior`, `publish_last`)
+- [x] Replay — ensure that all observers see the same sequence of emitted items, even if they subscribe after the Observable has begun emitting items
+  - `publish_replay(capacity)`, `share_replay(capacity)`
 
 ### Operators to Convert Observables
 
@@ -181,11 +187,13 @@ Specialty Observables that have more precisely-controlled subscription dynamics
 
 ## Subjects
 
-- [ ] AsyncSubject — emits the last value (and only the last value) emitted by the source Observable, and only after that source Observable completes
+- [x] AsyncSubject — emits the last value (and only the last value) emitted by the source Observable, and only after that source Observable completes
+  - `Local::async_subject()` / `Shared::async_subject()`
 - [x] BehaviorSubject — begins by emitting the item most recently emitted by the source Observable (or a seed/default value if none has yet been emitted) and then continues to emit any other items emitted later by the source Observable(s)
 - [x] PublishSubject — emits to an observer only those items that are emitted by the source Observable(s) subsequent to the time of the subscription
   - The standard `Subject` in rxRust (`Local::subject()` / `Shared::subject()`) behaves as a PublishSubject.
-- [ ] ReplaySubject — emits to any observer all of the items that were emitted by the source Observable(s), regardless of when the observer subscribes
+- [x] ReplaySubject — emits to any observer all of the items that were emitted by the source Observable(s), regardless of when the observer subscribes
+  - `replay_subject(capacity)` / `replay_subject_unbounded()`; time-windowed replay is not implemented
 
 ## Schedulers
 
