@@ -62,6 +62,7 @@ use crate::ops::{
   debounce::Debounce,
   default_if_empty::DefaultIfEmpty,
   delay::{Delay, DelaySubscriptionOp},
+  delay_when::DelayWhen,
   distinct::{Distinct, DistinctKey},
   distinct_until_changed::{DistinctUntilChanged, DistinctUntilKeyChanged},
   element_at::{ElementAt, ElementAtOr},
@@ -1414,6 +1415,34 @@ pub trait Observable: Context {
     self, delay: Duration, scheduler: Sch,
   ) -> Self::With<DelaySubscriptionOp<Self::Inner, Sch>> {
     self.transform(|core| DelaySubscriptionOp { source: core, delay, scheduler })
+  }
+
+  /// Delay each item until the observable returned by `selector(&item)`
+  /// first emits or completes
+  ///
+  /// # Examples
+  ///
+  /// ```rust,no_run
+  /// use rxrust::prelude::*;
+  ///
+  /// # #[cfg(not(target_arch = "wasm32"))]
+  /// # {
+  /// # #[tokio::main(flavor = "local")]
+  /// # async fn main() {
+  /// Local::from_iter(vec![30u64, 10])
+  ///   .delay_when(|ms| Local::timer(Duration::from_millis(*ms)))
+  ///   .subscribe(|v| println!("{}", v)); // 10, then 30
+  ///   
+  /// # }
+  /// # }
+  /// ```
+  #[doc(alias = "delayWhen")]
+  fn delay_when<F, Out>(self, selector: F) -> Self::With<DelayWhen<Self::Inner, F>>
+  where
+    F: for<'a> FnMut(&Self::Item<'a>) -> Out,
+    Out: Context<Inner: ObservableType>,
+  {
+    self.transform(|source| DelayWhen { source, selector })
   }
 
   /// Emit a value only after a quiet period has passed
