@@ -142,3 +142,29 @@ Unit tests live in each operator file per the conventions above. `tests/v1_integ
 - Generalizing `ConnectableObservable` may ripple through the `Connectable` trait and its type aliases. Mitigation: land the generalization as its own commit with the existing tests green before adding new subjects.
 - The `Item<'a>` generic associated type makes buffering operators need owned-item bounds. Mitigation: copy the bounds from `buffer_count` rather than inventing new ones.
 - `repeat_forever` on synchronous sources is an intentional infinite loop; the doc and test make that explicit.
+
+## Tier 2 (added after tier 1 review)
+
+Same conventions as tier 1. Delivered as two PRs stacked on tier 1b: PR 2a (simple operators and factories) then PR 2b (windowing and flattening).
+
+### PR 2a
+
+- **`partition(predicate)`** returns a pair `(matching, rest)`; each side is its own subscription to the source, as in RxJS, so callers who want one source subscription apply `share()` first. Requires the source and the predicate to be `Clone`. Implemented as one `Partition` operator with a `keep` flag rather than two closure types.
+- **`sequence_equal(other) -> bool`** compares items pairwise with `PartialEq`. Emits `false` and completes at the first mismatch, or when one side completes while the other still has unmatched items; emits `true` when both complete with every item matched. Empty against empty is `true`.
+- **`generate(initial, condition, iterate)`** factory: emits `initial`, then `iterate(&state)` while `condition(&state)` holds. Built on `from_iter` over a `Generate` iterator so it stays lazy.
+- **`iif(condition, then_source, else_source)`** factory: evaluates `condition()` at subscribe time and subscribes one branch; the subscription is an `EitherSubscription`.
+- **`from_callback(f)`** factory: `f` receives an emit callback; every value passed to it is emitted, and the observable completes when `f` returns. The error type is `Infallible`.
+- **`using(resource_factory, observable_factory)`** factory: a resource is created per subscription, the observable is built from a reference to it, and the resource is dropped when the subscription terminates or is unsubscribed.
+- **`single()`** emits the only item on completion. It errors with `SingleError::Empty` when the source is empty and with `SingleError::TooMany` as soon as a second item arrives, releasing the source. Requires `Err: From<SingleError>`.
+- **`on_error_resume_next(next)`** subscribes `next` when the source errors (the error is discarded) or completes, and mirrors it. Items must match; the output error type is `next`'s.
+
+### PR 2b
+
+- **`window(notifier)`, `window_count(count)`, `window_time(duration)`** (plus `window_time_with`) emit `Self::With<Subject<..>>` windows, following `group_by`'s context-marker pattern. The first window opens at subscribe; each boundary completes the current window and opens the next; source completion or error terminates the open window and then the outer stream. Items must be `Clone`.
+- **`buffer_when(closing_selector)`** opens a buffer at subscribe and a closing observable from the selector; when it emits, the buffer is emitted and a new buffer and closing observable start.
+- **`buffer_toggle(openings, closing_selector)`** starts a buffer for every item of `openings`, closed by `closing_selector(item)`; buffers may overlap; source completion flushes every open buffer.
+- **`delay_when(selector)`** emits each item when `selector(&item)`'s observable first emits or completes, and completes once the source has completed and every pending delay resolved.
+- **`merge_scan(seed, f)`**: `f(acc, item)` returns an observable of accumulators; each inner emission becomes the new accumulator and is emitted; inners run concurrently; `Acc: Clone`.
+- **`expand(f)`** emits every source item, feeds each emitted item (from the source or from an inner) to `f`, and merges the results recursively; `Item: Clone`.
+
+Out of scope for tier 2: time-windowed replay, `and`/`then`/`when`, `join`, `serialize`, backpressure.
