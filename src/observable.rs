@@ -88,6 +88,7 @@ use crate::ops::{
   scan::Scan,
   scan_map::ScanMap,
   sequence_equal::SequenceEqual,
+  single::{Single, SingleError},
   skip::Skip,
   skip_last::SkipLast,
   skip_until::SkipUntil,
@@ -732,6 +733,31 @@ pub trait Observable: Context {
     self, default_value: Self::Item<'a>,
   ) -> Self::With<DefaultIfEmpty<Last<Self::Inner>, Self::Item<'a>>> {
     self.transform(|source| DefaultIfEmpty { source: Last { source }, default_value })
+  }
+
+  /// Emit the only item on completion, or error
+  ///
+  /// Errors with `SingleError::Empty` on an empty source and with
+  /// `SingleError::TooMany` when a second item arrives. Requires
+  /// `Err: From<SingleError>`.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter(vec![1])
+  ///   .map_err(|_: std::convert::Infallible| SingleError::Empty)
+  ///   .single()
+  ///   .on_error(|e| println!("{}", e))
+  ///   .subscribe(|v| println!("{}", v));
+  /// // Prints: 1
+  /// ```
+  fn single(self) -> Self::With<Single<Self::Inner>>
+  where
+    Self::Err: From<SingleError>,
+  {
+    self.transform(|source| Single { source })
   }
 
   /// Skip the last `count` values from the source observable

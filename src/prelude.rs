@@ -19,8 +19,8 @@ pub use crate::observable::{
 pub use crate::observer::Observer;
 // Operators
 pub use crate::ops::{
-  into_future::*, into_stream::*, materialize::Notification, time_interval::Elapsed,
-  timeout::TimeoutError, timestamp::Timestamped,
+  into_future::*, into_stream::*, materialize::Notification, single::SingleError,
+  time_interval::Elapsed, timeout::TimeoutError, timestamp::Timestamped,
 };
 // Test Scheduler
 #[cfg(test)]
