@@ -63,4 +63,4 @@ console_error_panic_hook = "0.1.7"
 wasm-bindgen = "0.2"
 
 [workspace]
-members = ["crates/rx-leptos"]
+members = ["crates/rx-leptos", "examples/leptos-csr"]

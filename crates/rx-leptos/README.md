@@ -23,6 +23,11 @@ let _ = any_spawner::Executor::init_futures_executor();
 any_spawner::Executor::poll_local(); // deliver pending changes
 ```
 
+## Example
+
+[`examples/leptos-csr`](../../examples/leptos-csr) is a Leptos 0.8 client-side
+app built on these bridges; run it with `trunk serve`.
+
 ## Status
 
 Spike. Not published; API may change.
