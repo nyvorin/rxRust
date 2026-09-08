@@ -43,7 +43,7 @@ Check how `src/observable.rs` declares its submodules (`pub mod create;` etc. ne
 
 **Interfaces:** `Observable::partition<F>(self, predicate: F) -> (Self::With<Partition<Self::Inner, F>>, Self::With<Partition<Self::Inner, F>>) where Self::Inner: Clone, F: Clone + for<'a> FnMut(&Self::Item<'a>) -> bool`.
 
-- [ ] **Step 1: Operator file**
+- [x] **Step 1: Operator file**
 
 ```rust
 //! Partition operator implementation
@@ -182,7 +182,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Trait method** (after `filter`)
+- [x] **Step 2: Trait method** (after `filter`)
 
 ```rust
   /// Split the source into the items that satisfy `predicate` and the rest
@@ -216,7 +216,7 @@ mod tests {
   }
 ```
 
-- [ ] **Step 3:** `lib_tests ops::partition`, `doc_tests partition`, gate, commit `feat(ops.partition): add partition operator`.
+- [x] **Step 3:** `lib_tests ops::partition`, `doc_tests partition`, gate, commit `feat(ops.partition): add partition operator`.
 
 ---
 
@@ -226,7 +226,7 @@ mod tests {
 
 **Interfaces:** `Observable::sequence_equal<'a, S2>(self, other: S2) -> Self::With<SequenceEqual<Self::Inner, S2::Inner>>` with `merge`-style bounds plus `Self::Item<'a>: PartialEq`.
 
-- [ ] **Step 1: Operator file**
+- [x] **Step 1: Operator file**
 
 ```rust
 //! SequenceEqual operator implementation
@@ -528,7 +528,7 @@ mod tests {
 
 If `error(self, err)` unsubscribing `self.other` trips the mid-dispatch rule for the erroring side, note that `other` is always the opposite source, which is not dispatching, so it is safe.
 
-- [ ] **Step 2: Trait method** (after `contains`)
+- [x] **Step 2: Trait method** (after `contains`)
 
 ```rust
   /// Emit whether this observable and `other` emit equal sequences
@@ -555,7 +555,7 @@ If `error(self, err)` unsubscribing `self.other` trips the mid-dispatch rule for
   }
 ```
 
-- [ ] **Step 3:** `lib_tests ops::sequence_equal`, `doc_tests sequence_equal`, gate, commit `feat(ops.sequence_equal): add sequence_equal operator`.
+- [x] **Step 3:** `lib_tests ops::sequence_equal`, `doc_tests sequence_equal`, gate, commit `feat(ops.sequence_equal): add sequence_equal operator`.
 
 ---
 
@@ -563,7 +563,7 @@ If `error(self, err)` unsubscribing `self.other` trips the mid-dispatch rule for
 
 **Files:** create `src/ops/single.rs`; modify `src/ops.rs`, `src/observable.rs` (after `last_or`), `src/prelude.rs` (export `SingleError`).
 
-- [ ] **Step 1: Operator file**
+- [x] **Step 1: Operator file**
 
 ```rust
 //! Single operator implementation
@@ -759,7 +759,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Trait method** (after `last_or`) and prelude export
+- [x] **Step 2: Trait method** (after `last_or`) and prelude export
 
 ```rust
   /// Emit the only item on completion, or error
@@ -790,7 +790,7 @@ mod tests {
 
 Add `single::SingleError` to the prelude's `ops` re-export list.
 
-- [ ] **Step 3:** `lib_tests ops::single`, `doc_tests single`, gate, commit `feat(ops.single): add single operator`.
+- [x] **Step 3:** `lib_tests ops::single`, `doc_tests single`, gate, commit `feat(ops.single): add single operator`.
 
 ---
 
@@ -798,7 +798,7 @@ Add `single::SingleError` to the prelude's `ops` re-export list.
 
 **Files:** create `src/ops/on_error_resume_next.rs`; modify `src/ops.rs`, `src/observable.rs` (after `catch_error`).
 
-- [ ] **Step 1: Operator file**
+- [x] **Step 1: Operator file**
 
 ```rust
 //! OnErrorResumeNext operator implementation
@@ -988,7 +988,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Trait method** (after `catch_error`)
+- [x] **Step 2: Trait method** (after `catch_error`)
 
 ```rust
   /// Continue with `next` when the source errors or completes
@@ -1016,7 +1016,7 @@ mod tests {
   }
 ```
 
-- [ ] **Step 3:** `lib_tests ops::on_error_resume_next`, `doc_tests on_error_resume_next`, gate, commit `feat(ops.on_error_resume_next): add on_error_resume_next operator`.
+- [x] **Step 3:** `lib_tests ops::on_error_resume_next`, `doc_tests on_error_resume_next`, gate, commit `feat(ops.on_error_resume_next): add on_error_resume_next operator`.
 
 ---
 
@@ -1024,7 +1024,7 @@ mod tests {
 
 **Files:** create `src/observable/generate.rs`; register in `src/observable.rs`; modify `src/factory.rs` (after `from_fn`), `src/prelude.rs`.
 
-- [ ] **Step 1: Iterator file**
+- [x] **Step 1: Iterator file**
 
 ```rust
 //! Generate: a lazy state-machine iterator for `ObservableFactory::generate`.
@@ -1107,7 +1107,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Factory** (after `from_fn`)
+- [x] **Step 2: Factory** (after `from_fn`)
 
 ```rust
   /// Emit `initial`, then `iterate(&state)` while `condition(&state)` holds.
@@ -1135,7 +1135,7 @@ mod tests {
 
 Import `Generate` in `src/factory.rs` and export it from the prelude's `observable::{..}` list.
 
-- [ ] **Step 3:** `lib_tests observable::generate`, `doc_tests generate`, gate, commit `feat(factory.generate): add generate factory`.
+- [x] **Step 3:** `lib_tests observable::generate`, `doc_tests generate`, gate, commit `feat(factory.generate): add generate factory`.
 
 ---
 
@@ -1143,7 +1143,7 @@ Import `Generate` in `src/factory.rs` and export it from the prelude's `observab
 
 **Files:** create `src/observable/iif.rs`; register; modify `src/factory.rs` (after `defer`), `src/prelude.rs`.
 
-- [ ] **Step 1: Observable file**
+- [x] **Step 1: Observable file**
 
 ```rust
 //! Iif: choose one of two observables at subscribe time.
@@ -1239,7 +1239,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Factory** (after `defer`)
+- [x] **Step 2: Factory** (after `defer`)
 
 ```rust
   /// Subscribe to `then_source` when `condition()` is true at subscribe
@@ -1271,7 +1271,7 @@ mod tests {
 
 If the `for<'a>` equality on `B` rejects ordinary sources, drop that bound; the `CoreObservable` impl already forces both branches to accept the same observer.
 
-- [ ] **Step 3:** `lib_tests observable::iif`, `doc_tests iif`, gate, commit `feat(factory.iif): add iif factory`.
+- [x] **Step 3:** `lib_tests observable::iif`, `doc_tests iif`, gate, commit `feat(factory.iif): add iif factory`.
 
 ---
 
@@ -1279,7 +1279,7 @@ If the `for<'a>` equality on `B` rejects ordinary sources, drop that bound; the 
 
 **Files:** create `src/observable/from_callback.rs`; register; modify `src/factory.rs` (after `from_fn`), `src/prelude.rs`.
 
-- [ ] **Step 1: Observable file**
+- [x] **Step 1: Observable file**
 
 ```rust
 //! FromCallback: emit the values handed to a callback, then complete.
@@ -1392,7 +1392,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Factory** (after `from_fn`)
+- [x] **Step 2: Factory** (after `from_fn`)
 
 ```rust
   /// Emit every value handed to the callback, then complete when `f` returns.
@@ -1414,7 +1414,7 @@ mod tests {
   }
 ```
 
-- [ ] **Step 3:** `lib_tests observable::from_callback`, `doc_tests from_callback`, gate, commit `feat(factory.from_callback): add from_callback factory`.
+- [x] **Step 3:** `lib_tests observable::from_callback`, `doc_tests from_callback`, gate, commit `feat(factory.from_callback): add from_callback factory`.
 
 ---
 
@@ -1422,7 +1422,7 @@ mod tests {
 
 **Files:** create `src/observable/using.rs`; register; modify `src/factory.rs` (after `defer`), `src/prelude.rs`.
 
-- [ ] **Step 1: Observable file**
+- [x] **Step 1: Observable file**
 
 ```rust
 //! Using: tie a resource's lifetime to a subscription.
@@ -1604,7 +1604,7 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Factory** (after `defer`)
+- [x] **Step 2: Factory** (after `defer`)
 
 ```rust
   /// Create a resource per subscription and an observable from it; the
@@ -1631,7 +1631,7 @@ mod tests {
   }
 ```
 
-- [ ] **Step 3:** `lib_tests observable::using`, `doc_tests using`, gate, commit `feat(factory.using): add using factory`.
+- [x] **Step 3:** `lib_tests observable::using`, `doc_tests using`, gate, commit `feat(factory.using): add using factory`.
 
 ---
 
