@@ -52,6 +52,13 @@ pub struct OnErrorResumeNextObserver<Ctx: Context, N> {
   serial: Ctx::RcMut<Option<Ctx::BoxedSubscription>>,
 }
 
+// Hand-written so resubscribing operators upstream can clone this observer.
+impl<Ctx: Context + Clone, N: Clone> Clone for OnErrorResumeNextObserver<Ctx, N> {
+  fn clone(&self) -> Self {
+    Self { observer: self.observer.clone(), next: self.next.clone(), serial: self.serial.clone() }
+  }
+}
+
 impl<Ctx: Context, N> OnErrorResumeNextObserver<Ctx, N> {
   fn resume(mut self)
   where

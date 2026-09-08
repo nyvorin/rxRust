@@ -54,6 +54,18 @@ pub struct CatchErrorObserver<Ctx: Context, F> {
   serial: Ctx::RcMut<Option<Ctx::BoxedSubscription>>,
 }
 
+// Hand-written so resubscribing operators upstream (`retry`, `repeat`) can
+// clone this observer; a derive would demand `BoxedSubscription: Clone`.
+impl<Ctx: Context + Clone, F: Clone> Clone for CatchErrorObserver<Ctx, F> {
+  fn clone(&self) -> Self {
+    Self {
+      observer: self.observer.clone(),
+      handler: self.handler.clone(),
+      serial: self.serial.clone(),
+    }
+  }
+}
+
 impl<Ctx, F, Out, Item, SrcErr, OutErr> Observer<Item, SrcErr> for CatchErrorObserver<Ctx, F>
 where
   Ctx: Context + Observer<Item, OutErr>,
