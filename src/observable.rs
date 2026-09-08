@@ -53,6 +53,8 @@ use crate::ops::{
   buffer::Buffer, // Restored
   buffer_count::BufferCount,
   buffer_time::BufferTime,
+  buffer_toggle::BufferToggle,
+  buffer_when::BufferWhen,
   catch_error::CatchError,
   collect::Collect,
   combine_latest::CombineLatest,
@@ -2284,6 +2286,66 @@ pub trait Observable: Context {
       duration,
       max_buffer_size: Some(max_buffer_size),
       scheduler,
+    })
+  }
+
+  /// Buffer items until the observable returned by `closing_selector` emits,
+  /// then start a new buffer with a fresh closing observable
+  ///
+  /// # Examples
+  ///
+  /// ```rust,no_run
+  /// use rxrust::prelude::*;
+  ///
+  /// # #[cfg(not(target_arch = "wasm32"))]
+  /// # {
+  /// # #[tokio::main(flavor = "local")]
+  /// # async fn main() {
+  /// Local::interval(Duration::from_millis(10))
+  ///   .buffer_when(|| Local::timer(Duration::from_millis(100)))
+  ///   .subscribe(|b| println!("{:?}", b));
+  /// # }
+  /// # }
+  /// ```
+  #[doc(alias = "bufferWhen")]
+  fn buffer_when<F, Out>(self, closing_selector: F) -> Self::With<BufferWhen<Self::Inner, F>>
+  where
+    F: FnMut() -> Out,
+    Out: Context<Inner: ObservableType>,
+  {
+    self.transform(|source| BufferWhen { source, closing_selector })
+  }
+
+  /// Open a buffer for every item of `openings`, closed by
+  /// `closing_selector(item)`; buffers may overlap
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use std::convert::Infallible;
+  ///
+  /// use rxrust::prelude::*;
+  ///
+  /// let source = Local::subject::<i32, Infallible>();
+  /// let openings = Local::subject::<(), Infallible>();
+  /// source
+  ///   .clone()
+  ///   .buffer_toggle(openings.clone(), |_| Local::of(()))
+  ///   .subscribe(|b| println!("{:?}", b));
+  /// ```
+  #[doc(alias = "bufferToggle")]
+  fn buffer_toggle<Op, F, Out>(
+    self, openings: Op, closing_selector: F,
+  ) -> Self::With<BufferToggle<Self::Inner, Op::Inner, F>>
+  where
+    Op: Observable<Err = Self::Err, Inner: ObservableType>,
+    F: for<'a> FnMut(Op::Item<'a>) -> Out,
+    Out: Context<Inner: ObservableType>,
+  {
+    self.transform(|source| BufferToggle {
+      source,
+      openings: openings.into_inner(),
+      closing_selector,
     })
   }
 
