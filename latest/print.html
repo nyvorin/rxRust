@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f3e70845.js";
+            window.path_to_searchindex_js = "searchindex-cad3aa4e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0ee8fd1e.js"></script>
@@ -960,6 +960,10 @@ async fn main() {
 <tr><td style="text-align: left"><code>behavior_subject</code></td><td style="text-align: left">Creates a new <code>BehaviorSubject</code> (multicasting, replays last value). Use <code>behavior_subject_mut_ref</code> for mutable reference broadcasting.</td></tr>
 <tr><td style="text-align: left"><code>merge_observables</code></td><td style="text-align: left">Merges multiple observables concurrently, subscribing to all at once.</td></tr>
 <tr><td style="text-align: left"><code>concat_observables</code></td><td style="text-align: left">Concatenates multiple observables sequentially, subscribing one at a time.</td></tr>
+<tr><td style="text-align: left"><code>generate</code></td><td style="text-align: left">Emits a state-machine sequence: <code>initial</code>, then <code>iterate(&amp;state)</code> while <code>condition(&amp;state)</code>.</td></tr>
+<tr><td style="text-align: left"><code>iif</code></td><td style="text-align: left">Chooses one of two Observables at subscribe time.</td></tr>
+<tr><td style="text-align: left"><code>from_callback</code></td><td style="text-align: left">Emits the values handed to a callback, then completes.</td></tr>
+<tr><td style="text-align: left"><code>using</code></td><td style="text-align: left">Ties a resource’s lifetime to the subscription.</td></tr>
 </tbody>
 </table>
 </div>
@@ -983,6 +987,10 @@ async fn main() {
 <tr><td style="text-align: left"><code>buffer_time</code></td><td style="text-align: left">Collects items into a <code>Vec</code> for a specific duration.</td></tr>
 <tr><td style="text-align: left"><code>pairwise</code></td><td style="text-align: left">Groups consecutive emissions into pairs <code>(prev, current)</code>.</td></tr>
 <tr><td style="text-align: left"><code>group_by</code></td><td style="text-align: left">Divides an Observable into a set of Observables that each emit a different group of items.</td></tr>
+<tr><td style="text-align: left"><code>window</code> / <code>window_count</code> / <code>window_time</code></td><td style="text-align: left">Splits the source into windows, each an Observable of its own.</td></tr>
+<tr><td style="text-align: left"><code>buffer_when</code> / <code>buffer_toggle</code></td><td style="text-align: left">Buffers closed by selector-provided Observables; <code>buffer_toggle</code> buffers may overlap.</td></tr>
+<tr><td style="text-align: left"><code>merge_scan</code></td><td style="text-align: left">Accumulates through Observables returned by the accumulator function.</td></tr>
+<tr><td style="text-align: left"><code>expand</code></td><td style="text-align: left">Recursively projects every emitted item and merges the results.</td></tr>
 </tbody>
 </table>
 </div>
@@ -1016,6 +1024,9 @@ async fn main() {
 <tr><td style="text-align: left"><code>element_at</code> / <code>element_at_or</code></td><td style="text-align: left">Emits the item at a zero-based index, with an optional default.</td></tr>
 <tr><td style="text-align: left"><code>ignore_elements</code></td><td style="text-align: left">Drops every item, mirrors only error and completion.</td></tr>
 <tr><td style="text-align: left"><code>audit</code> / <code>audit_time</code></td><td style="text-align: left">Emits the latest item when a window ends; the next item opens a new window.</td></tr>
+<tr><td style="text-align: left"><code>single</code></td><td style="text-align: left">Emits the only item, or errors with <code>SingleError</code>.</td></tr>
+<tr><td style="text-align: left"><code>partition</code></td><td style="text-align: left">Splits the source into <code>(matching, rest)</code> by a predicate.</td></tr>
+<tr><td style="text-align: left"><code>sequence_equal</code></td><td style="text-align: left">Emits whether two Observables emit equal sequences.</td></tr>
 </tbody>
 </table>
 </div>
@@ -1056,6 +1067,7 @@ async fn main() {
 <tr><td style="text-align: left"><code>tap</code></td><td style="text-align: left">Performs a side effect for every emission (next, error, complete).</td></tr>
 <tr><td style="text-align: left"><code>delay</code></td><td style="text-align: left">Shifts the emissions forward in time by a specified delay.</td></tr>
 <tr><td style="text-align: left"><code>delay_subscription</code></td><td style="text-align: left">Delays the moment of subscription.</td></tr>
+<tr><td style="text-align: left"><code>delay_when</code></td><td style="text-align: left">Delays each item until its own duration Observable emits or completes.</td></tr>
 <tr><td style="text-align: left"><code>observe_on</code></td><td style="text-align: left">Specifies the Scheduler on which an observer will observe this Observable.</td></tr>
 <tr><td style="text-align: left"><code>subscribe_on</code></td><td style="text-align: left">Specifies the Scheduler on which the subscription will happen.</td></tr>
 <tr><td style="text-align: left"><code>finalize</code></td><td style="text-align: left">Registers a callback to be called when the Observable terminates.</td></tr>
@@ -1070,6 +1082,7 @@ async fn main() {
 <tr><td style="text-align: left"><code>catch_error</code></td><td style="text-align: left">Recovers from an error by switching to a fallback Observable.</td></tr>
 <tr><td style="text-align: left"><code>timeout</code></td><td style="text-align: left">Errors if the source is silent for longer than a duration.</td></tr>
 <tr><td style="text-align: left"><code>repeat</code> / <code>repeat_forever</code></td><td style="text-align: left">Resubscribes to the source when it completes.</td></tr>
+<tr><td style="text-align: left"><code>on_error_resume_next</code></td><td style="text-align: left">Continues with another Observable when the source errors or completes.</td></tr>
 </tbody>
 </table>
 </div>
