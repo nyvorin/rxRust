@@ -77,6 +77,7 @@ use crate::ops::{
   merge::Merge,
   merge_all::MergeAll,
   observe_on::ObserveOn,
+  on_error_resume_next::OnErrorResumeNext,
   pairwise::Pairwise,
   partition::Partition,
   race::Race,
@@ -1308,6 +1309,32 @@ pub trait Observable: Context {
     Out: Context<Inner: ObservableType>,
   {
     self.transform(|source| CatchError { source, handler })
+  }
+
+  /// Continue with `next` when the source errors or completes
+  ///
+  /// A source error is discarded. The output error type is `next`'s.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::throw_err("boom".to_string())
+  ///   .map(|_| 0)
+  ///   .on_error_resume_next(Local::of(1))
+  ///   .subscribe(|v| println!("{}", v));
+  /// // Prints: 1
+  /// ```
+  #[doc(alias = "onErrorResumeNext")]
+  fn on_error_resume_next<'a, N>(
+    self, next: N,
+  ) -> Self::With<OnErrorResumeNext<Self::Inner, N::Inner>>
+  where
+    Self: 'a,
+    N: Observable<Inner: ObservableType<Item<'a> = Self::Item<'a>>> + 'a,
+  {
+    self.transform(|source| OnErrorResumeNext { source, next: next.into_inner() })
   }
 
   /// Execute a callback when the stream completes
