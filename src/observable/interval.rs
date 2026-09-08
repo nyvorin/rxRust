@@ -205,7 +205,8 @@ mod tests {
   #[rxrust_macro::test(local)]
   async fn test_interval_timing() {
     // Deterministic count via take(3); only a lower bound on elapsed time is
-    // asserted, since a timer never fires early.
+    // asserted. Timers are measured against their own clock, so allow a few
+    // milliseconds of slack (node's setTimeout has fired 1ms early in CI).
     let start_time = Instant::now();
     let result = Local::interval(Duration::from_millis(20))
       .take(3)
@@ -216,8 +217,8 @@ mod tests {
 
     assert_eq!(result, Ok(Ok(vec![0, 1, 2])));
     assert!(
-      elapsed_time >= Duration::from_millis(60),
-      "Expected elapsed time >= 60ms, got {:?}",
+      elapsed_time >= Duration::from_millis(50),
+      "Expected elapsed time >= 50ms, got {:?}",
       elapsed_time
     );
   }
