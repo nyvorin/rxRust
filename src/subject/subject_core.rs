@@ -618,7 +618,6 @@ mod tests {
     sync::{Arc, Mutex},
   };
 
-  use super::*;
   use crate::{observable::connectable::Connectable, prelude::*};
 
   #[rxrust_macro::test]
