@@ -44,6 +44,8 @@ Operators that transform items that are emitted by an Observable.
   - [x] `buffer_with_count`
   - [x] `buffer_with_time`
   - [x] `buffer_with_count_and_time`
+  - [x] `buffer_when(closing_selector)`
+  - [x] `buffer_toggle(openings, closing_selector)`
 - [x] FlatMap — transform the items emitted by an Observable into Observables, then flatten the emissions from those into a single Observable
   - implemented as `merge_all` (flatten) or `map(...).merge_all(...)`
   - [x] ExhaustMap — ignore outer items while an inner Observable is active (`exhaust_map`)
@@ -53,7 +55,10 @@ Operators that transform items that are emitted by an Observable.
 - [x] Scan — apply a function to each item emitted by an Observable, sequentially, and emit each successive value
 - [x] Materialize/Dematerialize — represent both the items emitted and the notifications sent as emitted items, or reverse this process
   - `materialize` emits `Notification<Item, Err>`; `dematerialize` replays them
-- [ ] Window — periodically subdivide items from an Observable into Observable windows and emit these windows rather than emitting the items one at a time
+- [x] Window — periodically subdivide items from an Observable into Observable windows and emit these windows rather than emitting the items one at a time
+  - `window(notifier)`, `window_count(count)`, `window_time(duration)`
+- [x] MergeScan — accumulate through observables (`merge_scan`)
+- [x] Expand — recursively project and merge (`expand`)
 
 ### Filtering Observables
 
@@ -119,6 +124,7 @@ Operators that help to recover from error notifications from an Observable
 A toolbox of useful Operators for working with Observables
 
 - [x] Delay — shift the emissions from an Observable forward in time by a particular amount
+  - `delay`, `delay_at`, `delay_subscription`, and per-item `delay_when(selector)`
 - [x] Do — register an action to take upon a variety of Observable lifecycle events
   - named `tap`
 - [x] ObserveOn — specify the scheduler on which an observer will observe this Observable

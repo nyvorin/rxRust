@@ -603,3 +603,25 @@ fn test_partition_then_sequence_equal() {
 
   assert_eq!(*result.borrow(), vec![true]);
 }
+
+#[rxrust_macro::test]
+fn test_window_count_then_merge_scan() {
+  let sums = Rc::new(RefCell::new(Vec::new()));
+  let totals = Rc::new(RefCell::new(Vec::new()));
+  let sums_c = sums.clone();
+  let totals_c = totals.clone();
+
+  Local::from_iter(vec![1, 2, 3, 4])
+    .window_count(2)
+    .subscribe(move |w: Local<_>| {
+      let sink = sums_c.clone();
+      w.collect::<Vec<i32>>()
+        .subscribe(move |items| sink.borrow_mut().push(items.iter().sum::<i32>()));
+    });
+  assert_eq!(*sums.borrow(), vec![3, 7]);
+
+  Local::from_iter(sums.borrow().clone())
+    .merge_scan(0, |acc, v| Local::of(acc + v))
+    .subscribe(move |v| totals_c.borrow_mut().push(v));
+  assert_eq!(*totals.borrow(), vec![3, 10]);
+}

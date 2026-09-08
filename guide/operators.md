@@ -63,6 +63,10 @@ Operators that transform the items emitted by an Observable.
 | `buffer_time` | Collects items into a `Vec` for a specific duration. |
 | `pairwise` | Groups consecutive emissions into pairs `(prev, current)`. |
 | `group_by` | Divides an Observable into a set of Observables that each emit a different group of items. |
+| `window` / `window_count` / `window_time` | Splits the source into windows, each an Observable of its own. |
+| `buffer_when` / `buffer_toggle` | Buffers closed by selector-provided Observables; `buffer_toggle` buffers may overlap. |
+| `merge_scan` | Accumulates through Observables returned by the accumulator function. |
+| `expand` | Recursively projects every emitted item and merges the results. |
 
 ### Filtering Operators
 
@@ -127,6 +131,7 @@ Operators for observing, timing, and error handling.
 | `tap` | Performs a side effect for every emission (next, error, complete). |
 | `delay` | Shifts the emissions forward in time by a specified delay. |
 | `delay_subscription` | Delays the moment of subscription. |
+| `delay_when` | Delays each item until its own duration Observable emits or completes. |
 | `observe_on` | Specifies the Scheduler on which an observer will observe this Observable. |
 | `subscribe_on` | Specifies the Scheduler on which the subscription will happen. |
 | `finalize` | Registers a callback to be called when the Observable terminates. |
