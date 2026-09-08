@@ -115,6 +115,8 @@ use crate::ops::{
   time_interval::TimeInterval,
   timeout::{Timeout, TimeoutError, default_timeout_error},
   timestamp::Timestamp,
+  window::{Window, WindowSubjectOf, WindowTimer, never_errors},
+  window_count::WindowCount,
   with_latest_from::WithLatestFrom,
   zip::Zip,
 };
@@ -2283,6 +2285,99 @@ pub trait Observable: Context {
       max_buffer_size: Some(max_buffer_size),
       scheduler,
     })
+  }
+
+  /// Split the source into consecutive windows delimited by `notifier`
+  ///
+  /// Each window is a `Subject` wrapped in the context and is emitted as it
+  /// opens; the first opens at subscribe. Items must be `Clone`.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use std::convert::Infallible;
+  ///
+  /// use rxrust::prelude::*;
+  ///
+  /// let source = Local::subject::<i32, Infallible>();
+  /// let boundary = Local::subject::<(), Infallible>();
+  /// source
+  ///   .clone()
+  ///   .window(boundary.clone())
+  ///   .subscribe(|w: Local<_>| {
+  ///     w.subscribe(|v| println!("{}", v));
+  ///   });
+  /// ```
+  #[allow(clippy::type_complexity)]
+  fn window<'a, N>(
+    self, notifier: N,
+  ) -> Self::With<Window<Self::Inner, N::Inner, WindowSubjectOf<'a, Self>>>
+  where
+    N: Observable<Err = Self::Err, Inner: ObservableType>,
+  {
+    self.transform(|source| Window::new(source, notifier.into_inner()))
+  }
+
+  /// Split the source into windows of `count` items
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter(vec![1, 2, 3])
+  ///   .window_count(2)
+  ///   .subscribe(|w: Local<_>| {
+  ///     w.subscribe(|v| println!("{}", v));
+  ///   });
+  /// ```
+  #[doc(alias = "windowCount")]
+  fn window_count<'a>(
+    self, count: usize,
+  ) -> Self::With<WindowCount<Self::Inner, WindowSubjectOf<'a, Self>>> {
+    self.transform(|source| WindowCount::new(source, count))
+  }
+
+  /// Split the source into windows of `duration`
+  ///
+  /// # Examples
+  ///
+  /// ```rust,no_run
+  /// use rxrust::prelude::*;
+  ///
+  /// # #[cfg(not(target_arch = "wasm32"))]
+  /// # {
+  /// # #[tokio::main(flavor = "local")]
+  /// # async fn main() {
+  /// Local::interval(Duration::from_millis(10))
+  ///   .window_time(Duration::from_millis(100))
+  ///   .subscribe(|w: Local<_>| {
+  ///     w.subscribe(|v| println!("{}", v));
+  ///   });
+  /// # }
+  /// # }
+  /// ```
+  #[doc(alias = "windowTime")]
+  #[allow(clippy::type_complexity)]
+  fn window_time<'a>(
+    self, duration: Duration,
+  ) -> Self::With<
+    Window<Self::Inner, WindowTimer<Self::Scheduler, Self::Err>, WindowSubjectOf<'a, Self>>,
+  > {
+    let scheduler = self.scheduler().clone();
+    self.window_time_with(duration, scheduler)
+  }
+
+  /// [`Observable::window_time`] with an explicit scheduler
+  #[allow(clippy::type_complexity)]
+  fn window_time_with<'a, Sch>(
+    self, duration: Duration, scheduler: Sch,
+  ) -> Self::With<Window<Self::Inner, WindowTimer<Sch, Self::Err>, WindowSubjectOf<'a, Self>>> {
+    let timer = MapErr {
+      source: Interval { period: duration, scheduler },
+      func: never_errors::<Self::Err> as fn(std::convert::Infallible) -> Self::Err,
+    };
+    self.transform(|source| Window::new(source, timer))
   }
 
   /// Convert this observable into a ConnectableObservable using the specified
