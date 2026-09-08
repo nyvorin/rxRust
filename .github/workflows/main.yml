@@ -97,6 +97,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --no-default-features --features "${{ needs.stable-features.outputs.features }}"
+      - run: cargo test --examples --no-default-features --features "${{ needs.stable-features.outputs.features }}"
 
   test-nightly:
     name: Tests (nightly, all-features)
@@ -109,6 +110,7 @@ jobs:
           toolchain: nightly-2025-12-20
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --all-features
+      - run: cargo test --examples --all-features
 
   test-wasm:
     name: WASM Tests
