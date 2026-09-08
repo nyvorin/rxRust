@@ -119,6 +119,26 @@ Runnable programs under `examples/` that show rxRust in real systems; each carri
 | `cargo run --example event_sourcing` | Rebuilding per-account balances from an event log with `group_by`, `scan`, `publish`/`connect`, and a `materialize` audit trail |
 | `cargo run --example custom_scheduler` | Injecting a custom scheduler |
 
+## 🍃 Leptos
+
+[`crates/rx-leptos`](crates/rx-leptos) bridges observables and Leptos 0.8 signals
+(via `reactive_graph`): `from_signal` mirrors a signal or memo as an observable,
+`to_signal` / `use_observable` turn an observable into a read signal that is
+unsubscribed when its reactive owner is cleaned up, and `from_event` (wasm)
+streams DOM events. Signal changes are delivered on the app executor's next
+tick, exactly when a Leptos effect would run.
+
+```rust,ignore
+let query = RwSignal::new(String::new());
+let results = to_signal(
+  from_signal(query)
+    .debounce(Duration::from_millis(300))
+    .distinct_until_changed()
+    .switch_map(|q| search(q)),
+  Vec::new(),
+);
+```
+
 ## 🌙 Nightly (Experimental)
 
 rxRust targets **stable Rust** by default.

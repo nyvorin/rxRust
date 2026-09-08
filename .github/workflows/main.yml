@@ -124,6 +124,19 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - run: wasm-pack test --node
+      - run: wasm-pack test --node crates/rx-leptos
+
+  test-leptos:
+    name: rx-leptos (stable)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy -p rx-leptos --all-targets -- -D warnings
+      - run: cargo test -p rx-leptos
 
   ci:
     name: CI Status
@@ -138,6 +151,7 @@ jobs:
         test,
         test-nightly,
         test-wasm,
+        test-leptos,
       ]
     if: always()
     steps:
@@ -150,7 +164,8 @@ jobs:
              [ "${{ needs.check-nightly.result }}" != "success" ] || \
              [ "${{ needs.test.result }}" != "success" ] || \
              [ "${{ needs.test-nightly.result }}" != "success" ] || \
-             [ "${{ needs.test-wasm.result }}" != "success" ]; then
+             [ "${{ needs.test-wasm.result }}" != "success" ] || \
+             [ "${{ needs.test-leptos.result }}" != "success" ]; then
             echo "CI failed"
             exit 1
           fi

@@ -103,10 +103,7 @@ where
 impl<S, F, C, Key, Unsub> CoreObservable<C> for DistinctUntilKeyChanged<S, F>
 where
   C: Context,
-  S: for<'a> CoreObservable<
-      C::With<DistinctUntilKeyChangedObserver<C::Inner, F, Key>>,
-      Unsub = Unsub,
-    >,
+  S: CoreObservable<C::With<DistinctUntilKeyChangedObserver<C::Inner, F, Key>>, Unsub = Unsub>,
   Unsub: Subscription,
   F: for<'a> Fn(&<S as ObservableType>::Item<'a>) -> Key,
 {
