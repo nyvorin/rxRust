@@ -78,6 +78,7 @@ use crate::ops::{
   merge_all::MergeAll,
   observe_on::ObserveOn,
   pairwise::Pairwise,
+  partition::Partition,
   race::Race,
   reduce::{Reduce, ReduceFn, ReduceInitialFn},
   ref_count::{PublishSubjectOf, RefCount, ShareOf, ShareReplayOf},
@@ -247,6 +248,37 @@ pub trait Observable: Context {
     F: for<'a> FnMut(&Self::Item<'a>) -> bool,
   {
     self.transform(|source| Filter { source, filter })
+  }
+
+  /// Split the source into the items that satisfy `predicate` and the rest
+  ///
+  /// Returns `(matching, rest)`. Each half subscribes to the source on its
+  /// own; apply `share()` first if the source must be subscribed once.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let (evens, odds) = Local::from_iter(vec![1, 2, 3]).partition(|v| v % 2 == 0);
+  /// evens.subscribe(|v| println!("even {}", v));
+  /// odds.subscribe(|v| println!("odd {}", v));
+  /// ```
+  #[allow(clippy::type_complexity)]
+  fn partition<F>(
+    self, predicate: F,
+  ) -> (Self::With<Partition<Self::Inner, F>>, Self::With<Partition<Self::Inner, F>>)
+  where
+    Self::Inner: Clone,
+    F: Clone + for<'a> FnMut(&Self::Item<'a>) -> bool,
+  {
+    let matching = self.wrap(Partition {
+      source: self.inner().clone(),
+      predicate: predicate.clone(),
+      keep: true,
+    });
+    let rest = self.transform(|source| Partition { source, predicate, keep: false });
+    (matching, rest)
   }
 
   /// Emit only items that have not been emitted before
