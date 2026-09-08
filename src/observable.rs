@@ -69,6 +69,7 @@ use crate::ops::{
   end_with::EndWith,
   every::Every,
   exhaust_map::ExhaustMap,
+  expand::Expand,
   filter::Filter,
   filter_map::FilterMap,
   finalize::Finalize,
@@ -3359,6 +3360,28 @@ pub trait Observable: Context {
     Out: Context<Inner: ObservableType<Err = Self::Err> + 'static>,
   {
     self.transform(|source| ExhaustMap { source, func: f })
+  }
+
+  /// Recursively project every emitted item through `f` and merge the results
+  ///
+  /// Return an empty observable from `f` to stop the recursion.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::of(1)
+  ///   .expand(|v| if v < 4 { Local::from_iter(vec![v * 2]) } else { Local::from_iter(vec![]) })
+  ///   .subscribe(|v| println!("{}", v));
+  /// // Prints: 1, 2, 4
+  /// ```
+  fn expand<F, Out>(self, f: F) -> Self::With<Expand<Self::Inner, F>>
+  where
+    F: for<'a> FnMut(Self::Item<'a>) -> Out,
+    Out: Context<Inner: ObservableType>,
+  {
+    self.transform(|source| Expand { source, func: f })
   }
 }
 
