@@ -102,7 +102,7 @@
 // Internal module imports
 use crate::{
   context::Context,
-  observable::{Generate, defer::Defer, *},
+  observable::{Generate, Iif, defer::Defer, *},
   observer::Emitter,
   scheduler::{Duration, Instant},
   subject::{
@@ -563,6 +563,32 @@ pub trait ObservableFactory: Context<Inner = ()> {
     O: ObservableType,
   {
     Self::lift(Defer::new(f))
+  }
+
+  /// Subscribe to `then_source` when `condition()` is true at subscribe
+  /// time, otherwise to `else_source`.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::iif(|| true, Local::of(1), Local::of(2)).subscribe(|v| println!("{}", v));
+  /// // Prints: 1
+  /// ```
+  fn iif<F, A, B>(
+    condition: F, then_source: Self::With<A>, else_source: Self::With<B>,
+  ) -> Self::With<Iif<F, A, B>>
+  where
+    F: FnOnce() -> bool,
+    A: ObservableType,
+    B: ObservableType<Err = A::Err>,
+  {
+    Self::lift(Iif {
+      condition,
+      then_source: then_source.into_inner(),
+      else_source: else_source.into_inner(),
+    })
   }
 
   /// Creates an observable that emits a single value after a specified delay.
