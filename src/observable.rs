@@ -87,6 +87,7 @@ use crate::ops::{
   materialize::{Dematerialize, Materialize, Notification},
   merge::Merge,
   merge_all::MergeAll,
+  merge_scan::MergeScan,
   observe_on::ObserveOn,
   on_error_resume_next::OnErrorResumeNext,
   pairwise::Pairwise,
@@ -473,6 +474,29 @@ pub trait Observable: Context {
     F: for<'a> FnMut(&mut Acc, Self::Item<'a>) -> Output,
   {
     self.transform(|source| ScanMap { source, func: f, initial_value: initial })
+  }
+
+  /// Accumulate through observables: `f(acc, item)` returns an observable
+  /// whose emissions become the new accumulator and are emitted
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::from_iter(vec![1, 2, 3])
+  ///   .merge_scan(0, |acc, v| Local::of(acc + v))
+  ///   .subscribe(|v| println!("{}", v));
+  /// // Prints: 1, 3, 6
+  /// ```
+  #[doc(alias = "mergeScan")]
+  fn merge_scan<Acc, F, Out>(self, seed: Acc, f: F) -> Self::With<MergeScan<Self::Inner, F, Acc>>
+  where
+    Acc: Clone,
+    F: for<'a> FnMut(Acc, Self::Item<'a>) -> Out,
+    Out: Context<Inner: ObservableType>,
+  {
+    self.transform(|source| MergeScan { source, func: f, seed })
   }
 
   /// Apply an accumulator function and emit each intermediate result
@@ -1432,7 +1456,7 @@ pub trait Observable: Context {
   /// Local::from_iter(vec![30u64, 10])
   ///   .delay_when(|ms| Local::timer(Duration::from_millis(*ms)))
   ///   .subscribe(|v| println!("{}", v)); // 10, then 30
-  ///   
+  ///
   /// # }
   /// # }
   /// ```
