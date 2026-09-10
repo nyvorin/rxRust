@@ -125,8 +125,9 @@ Runnable programs under `examples/` that show rxRust in real systems; each carri
 (via `reactive_graph`): `from_signal` mirrors a signal or memo as an observable,
 `to_signal` / `use_observable` turn an observable into a read signal that is
 unsubscribed when its reactive owner is cleaned up, and `from_event` (wasm)
-streams DOM events. Signal changes are delivered on the app executor's next
-tick, exactly when a Leptos effect would run. [`examples/leptos-csr`](examples/leptos-csr)
+streams DOM events, and `use_subject` / `use_subscription` tie subjects and
+subscriptions to a component's lifetime. Signal changes are delivered on the
+app executor's next tick, exactly when a Leptos effect would run. [`examples/leptos-csr`](examples/leptos-csr)
 is a runnable client-side app (typeahead with cancellation, stopwatch, mouse
 tracker) whose reactive models are tested natively.
 

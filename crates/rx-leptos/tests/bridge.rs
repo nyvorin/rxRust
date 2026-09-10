@@ -215,3 +215,86 @@ fn operators_apply_between_signal_and_signal() {
   assert_eq!(*changes.borrow(), 3);
   owner.cleanup();
 }
+
+#[test]
+fn signal_ext_gives_from_signal_a_method_form() {
+  executor();
+  let count = RwSignal::new(7);
+  let seen = Rc::new(RefCell::new(Vec::new()));
+  let sink = seen.clone();
+  let _sub = count
+    .to_observable()
+    .subscribe(move |v| sink.borrow_mut().push(v));
+  count.set(8);
+  Executor::poll_local();
+  assert_eq!(*seen.borrow(), vec![7, 8]);
+}
+
+#[test]
+fn observable_ext_gives_to_signal_method_forms() {
+  executor();
+  let owner = Owner::new();
+  let mut source = Local::subject::<i32, Infallible>();
+  let input = RwSignal::new(1);
+
+  let (latest, doubled, first) = owner.with(|| {
+    (
+      source.clone().to_option_signal(),
+      input
+        .to_observable()
+        .map(|v: i32| v * 2)
+        .to_signal(0),
+      source
+        .clone()
+        .map(|v: i32| Rc::new(v))
+        .to_signal_local(Rc::new(0)),
+    )
+  });
+  assert_eq!(latest.get_untracked(), None);
+  assert_eq!(doubled.get_untracked(), 2);
+
+  source.next(3);
+  input.set(5);
+  Executor::poll_local();
+  assert_eq!(latest.get_untracked(), Some(3));
+  assert_eq!(doubled.get_untracked(), 10);
+  assert_eq!(*first.get_untracked(), 3);
+
+  owner.cleanup();
+  assert_eq!(source.inner.subscriber_count(), 0);
+}
+
+#[test]
+fn use_subscription_unsubscribes_on_owner_cleanup() {
+  let owner = Owner::new();
+  let source = Local::subject::<i32, Infallible>();
+  owner.with(|| use_subscription(source.clone().subscribe(|_| {})));
+  assert_eq!(source.inner.subscriber_count(), 1);
+  owner.cleanup();
+  assert_eq!(source.inner.subscriber_count(), 0);
+}
+
+#[test]
+fn use_subject_completes_subscribers_on_owner_cleanup() {
+  let owner = Owner::new();
+  let mut clicks = owner.with(use_subject::<u32>);
+  let seen = Rc::new(RefCell::new(Vec::new()));
+  let completed = Rc::new(RefCell::new(false));
+  let (sink, done) = (seen.clone(), completed.clone());
+
+  clicks
+    .clone()
+    .on_complete(move || *done.borrow_mut() = true)
+    .subscribe(move |v| sink.borrow_mut().push(v));
+
+  clicks.next(1);
+  clicks.next(2);
+  assert_eq!(*seen.borrow(), vec![1, 2]);
+  assert!(!*completed.borrow());
+
+  owner.cleanup();
+  assert!(*completed.borrow(), "cleanup completes the subject");
+  assert_eq!(clicks.inner.subscriber_count(), 0);
+  clicks.next(3); // completed subject: dropped quietly
+  assert_eq!(*seen.borrow(), vec![1, 2]);
+}

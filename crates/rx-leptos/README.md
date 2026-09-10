@@ -9,6 +9,23 @@ signals, built on `reactive_graph` (the reactive core Leptos re-exports).
 | `to_signal(obs, initial)` / `to_signal_local` | observable → signal | The signal and the subscription belong to the current reactive owner and are disposed with it. |
 | `use_observable(obs)` | observable → `ReadSignal<Option<T>>` | `None` until the first item. |
 | `from_event(target, "click")` | DOM → observable | wasm only; removes the listener on unsubscribe. |
+| `use_subject::<T>()` | owner-scoped `Subject` | Completes (and releases subscribers) when the owner is cleaned up. Feed it from event handlers. |
+| `use_subscription(sub)` | owner-scoped subscription | Unsubscribes when the owner is cleaned up; the rx counterpart of `Effect::new` for side effects. |
+
+Method forms come from `SignalExt` and `ObservableExt` in the prelude:
+
+```rust
+let results = query
+  .to_observable()
+  .debounce(Duration::from_millis(300))
+  .distinct_until_changed()
+  .switch_map(search)
+  .to_signal(Vec::new());
+```
+
+`rx_leptos::reactive_graph` and `rx_leptos::rxrust` re-export the underlying
+crates; `leptos::prelude` exports the same `reactive_graph` types, so
+glob-importing both preludes is fine.
 
 Everything uses rxRust's `Local` context: signals are single-threaded UI state.
 

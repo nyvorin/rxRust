@@ -3,15 +3,16 @@
 use std::convert::Infallible;
 
 use reactive_graph::{
-  owner::{LocalStorage, StoredValue},
+  owner::LocalStorage,
   signal::{ReadSignal, WriteSignal, signal, signal_local},
   traits::{IsDisposed, Set},
 };
 use rxrust::{
   observable::{CoreObservable, Observable},
   observer::Observer,
-  subscription::{Subscription, SubscriptionGuard},
 };
+
+use crate::hooks::use_subscription;
 
 /// Observer that writes every item into a signal.
 pub struct SetSignalObserver<T, St = reactive_graph::owner::SyncStorage> {
@@ -50,13 +51,6 @@ where
   fn is_closed(&self) -> bool { self.write.is_disposed() }
 }
 
-/// Ties a subscription to the current reactive owner: the guard is stored in
-/// the owner's arena and dropped, unsubscribing, when the owner cleans up.
-fn keep_until_cleanup<U: Subscription + 'static>(subscription: U) {
-  let guard: SubscriptionGuard<U> = subscription.unsubscribe_when_dropped();
-  let _stored: StoredValue<SubscriptionGuard<U>, LocalStorage> = StoredValue::new_local(guard);
-}
-
 /// Turn an observable into a read signal that starts at `initial`.
 ///
 /// The signal and the subscription both belong to the reactive owner that
@@ -89,7 +83,7 @@ where
 {
   let (read, write) = signal(initial);
   let subscription = observable.subscribe_with(SetSignalObserver { write });
-  keep_until_cleanup(subscription);
+  use_subscription(subscription);
   read
 }
 
@@ -102,7 +96,7 @@ where
 {
   let (read, write) = signal_local(initial);
   let subscription = observable.subscribe_with(SetSignalObserver { write });
-  keep_until_cleanup(subscription);
+  use_subscription(subscription);
   read
 }
 
@@ -117,6 +111,6 @@ where
 {
   let (read, write) = signal(None);
   let subscription = observable.subscribe_with(SetSomeObserver { write });
-  keep_until_cleanup(subscription);
+  use_subscription(subscription);
   read
 }
