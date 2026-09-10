@@ -2,7 +2,11 @@
 
 use std::convert::Infallible;
 
-use reactive_graph::{owner::LocalStorage, signal::ReadSignal, traits::Get};
+use reactive_graph::{
+  owner::LocalStorage,
+  signal::{ReadSignal, WriteSignal},
+  traits::{Get, IsDisposed, Set},
+};
 use rxrust::{
   observable::{CoreObservable, Observable},
   prelude::Local,
@@ -10,7 +14,9 @@ use rxrust::{
 
 use crate::{
   from_signal::{FromSignal, from_signal},
-  to_signal::{SetSignalObserver, SetSomeObserver, to_signal, to_signal_local, use_observable},
+  to_signal::{
+    SetSignalObserver, SetSomeObserver, feed_signal, to_signal, to_signal_local, use_observable,
+  },
 };
 
 /// `signal.to_observable()`, the method form of [`from_signal`].
@@ -22,7 +28,7 @@ pub trait SignalExt: Get + Sized + 'static {
 impl<S: Get + 'static> SignalExt for S {}
 
 /// `observable.to_signal(initial)` and friends, the method forms of
-/// [`to_signal`], [`to_signal_local`] and [`use_observable`].
+/// [`to_signal`], [`to_signal_local`], [`feed_signal`] and [`use_observable`].
 pub trait ObservableExt: Observable<Err = Infallible> + Sized {
   /// See [`to_signal`].
   fn to_signal<T>(self, initial: T) -> ReadSignal<T>
@@ -40,6 +46,16 @@ pub trait ObservableExt: Observable<Err = Infallible> + Sized {
     Self::Inner: CoreObservable<Self::With<SetSignalObserver<T, LocalStorage>>, Unsub: 'static>,
   {
     to_signal_local(self, initial)
+  }
+
+  /// See [`feed_signal`]: write every item into an existing signal for as
+  /// long as the current owner lives.
+  fn feed<T, St>(self, write: WriteSignal<T, St>)
+  where
+    Self::Inner: CoreObservable<Self::With<SetSignalObserver<T, St>>, Unsub: 'static>,
+    WriteSignal<T, St>: Set<Value = T> + IsDisposed,
+  {
+    feed_signal(self, write)
   }
 
   /// See [`use_observable`]: `None` until the first item.

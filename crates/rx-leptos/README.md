@@ -9,6 +9,7 @@ signals, built on `reactive_graph` (the reactive core Leptos re-exports).
 | `to_signal(obs, initial)` / `to_signal_local` | observable → signal | The signal and the subscription belong to the current reactive owner and are disposed with it. |
 | `use_observable(obs)` | observable → `ReadSignal<Option<T>>` | `None` until the first item. |
 | `from_event(target, "click")` | DOM → observable | wasm only; removes the listener on unsubscribe. |
+| `feed_signal(obs, write)` | observable → existing signal | Writes every item into a `WriteSignal` until the owner is cleaned up. The SSR-friendly form: create the signal at component level, call this inside `Effect::new`. |
 | `use_subject::<T>()` | owner-scoped `Subject` | Completes (and releases subscribers) when the owner is cleaned up. Feed it from event handlers. |
 | `use_subscription(sub)` | owner-scoped subscription | Unsubscribes when the owner is cleaned up; the rx counterpart of `Effect::new` for side effects. |
 
@@ -28,6 +29,15 @@ crates; `leptos::prelude` exports the same `reactive_graph` types, so
 glob-importing both preludes is fine.
 
 Everything uses rxRust's `Local` context: signals are single-threaded UI state.
+
+## Server-side rendering
+
+Leptos's server integrations have no tokio `LocalSet`, so `spawn_local`
+panics during server render; rxRust's `LocalScheduler` timers and
+`from_signal` change delivery both need it. Create signals at component level
+and wire pipelines inside `Effect::new` (browser only), feeding the signals
+with `feed_signal` / `.feed(write)`. [`examples/leptos-ssr`](../../examples/leptos-ssr)
+shows the pattern with `cargo leptos`.
 
 ## Outside Leptos
 

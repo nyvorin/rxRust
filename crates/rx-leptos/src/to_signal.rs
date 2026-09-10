@@ -3,7 +3,7 @@
 use std::convert::Infallible;
 
 use reactive_graph::{
-  owner::LocalStorage,
+  owner::{LocalStorage, Owner},
   signal::{ReadSignal, WriteSignal, signal, signal_local},
   traits::{IsDisposed, Set},
 };
@@ -14,9 +14,23 @@ use rxrust::{
 
 use crate::hooks::use_subscription;
 
+/// Run `f` under `owner`, if there is one.
+///
+/// Items often arrive from executor tasks or timers with no reactive owner
+/// on the stack. Under Leptos's server features (`sandboxed-arenas`) signal
+/// access outside an owner panics, so every write re-enters the owner that
+/// was current when the subscription was made.
+pub(crate) fn with_owner<R>(owner: &Option<Owner>, f: impl FnOnce() -> R) -> R {
+  match owner {
+    Some(owner) => owner.with(f),
+    None => f(),
+  }
+}
+
 /// Observer that writes every item into a signal.
 pub struct SetSignalObserver<T, St = reactive_graph::owner::SyncStorage> {
   write: WriteSignal<T, St>,
+  owner: Option<Owner>,
 }
 
 impl<T, St> Observer<T, Infallible> for SetSignalObserver<T, St>
@@ -24,31 +38,75 @@ where
   WriteSignal<T, St>: Set<Value = T> + IsDisposed,
 {
   // A disposed signal (its owner was cleaned up) silently drops the item.
-  fn next(&mut self, value: T) { let _ = self.write.try_set(value); }
+  fn next(&mut self, value: T) {
+    let write = &self.write;
+    with_owner(&self.owner, || {
+      let _ = write.try_set(value);
+    });
+  }
 
   fn error(self, never: Infallible) { match never {} }
 
   fn complete(self) {}
 
-  fn is_closed(&self) -> bool { self.write.is_disposed() }
+  fn is_closed(&self) -> bool { with_owner(&self.owner, || self.write.is_disposed()) }
 }
 
 /// Observer that writes every item into an `Option` signal.
 pub struct SetSomeObserver<T> {
   write: WriteSignal<Option<T>>,
+  owner: Option<Owner>,
 }
 
 impl<T> Observer<T, Infallible> for SetSomeObserver<T>
 where
   WriteSignal<Option<T>>: Set<Value = Option<T>> + IsDisposed,
 {
-  fn next(&mut self, value: T) { let _ = self.write.try_set(Some(value)); }
+  fn next(&mut self, value: T) {
+    let write = &self.write;
+    with_owner(&self.owner, || {
+      let _ = write.try_set(Some(value));
+    });
+  }
 
   fn error(self, never: Infallible) { match never {} }
 
   fn complete(self) {}
 
-  fn is_closed(&self) -> bool { self.write.is_disposed() }
+  fn is_closed(&self) -> bool { with_owner(&self.owner, || self.write.is_disposed()) }
+}
+
+/// Subscribe `observable` and write every item into `write`, for as long as
+/// the current reactive owner lives.
+///
+/// This is the building block for server-rendered apps: create the signal
+/// at component level (so the server renders its initial value) and call
+/// `feed_signal` inside `Effect::new`, which only runs in the browser.
+///
+/// ```
+/// use std::convert::Infallible;
+///
+/// use reactive_graph::{owner::Owner, signal::signal, traits::GetUntracked};
+/// use rx_leptos::feed_signal;
+/// use rxrust::prelude::*;
+///
+/// let owner = Owner::new();
+/// let mut source = Local::subject::<i32, Infallible>();
+/// let (count, set_count) = signal(0);
+/// owner.with(|| feed_signal(source.clone(), set_count));
+/// source.next(7);
+/// assert_eq!(count.get_untracked(), 7);
+/// owner.cleanup();
+/// assert_eq!(source.inner.subscriber_count(), 0);
+/// ```
+pub fn feed_signal<O, T, St>(observable: O, write: WriteSignal<T, St>)
+where
+  O: Observable<Err = Infallible>,
+  O::Inner: CoreObservable<O::With<SetSignalObserver<T, St>>, Unsub: 'static>,
+  WriteSignal<T, St>: Set<Value = T> + IsDisposed,
+{
+  let owner = Owner::current();
+  use_subscription(observable.subscribe_with(SetSignalObserver { write, owner }));
 }
 
 /// Turn an observable into a read signal that starts at `initial`.
@@ -82,8 +140,7 @@ where
   O::Inner: CoreObservable<O::With<SetSignalObserver<T>>, Unsub: 'static>,
 {
   let (read, write) = signal(initial);
-  let subscription = observable.subscribe_with(SetSignalObserver { write });
-  use_subscription(subscription);
+  feed_signal(observable, write);
   read
 }
 
@@ -95,8 +152,7 @@ where
   O::Inner: CoreObservable<O::With<SetSignalObserver<T, LocalStorage>>, Unsub: 'static>,
 {
   let (read, write) = signal_local(initial);
-  let subscription = observable.subscribe_with(SetSignalObserver { write });
-  use_subscription(subscription);
+  feed_signal(observable, write);
   read
 }
 
@@ -110,7 +166,7 @@ where
   O::Inner: CoreObservable<O::With<SetSomeObserver<T>>, Unsub: 'static>,
 {
   let (read, write) = signal(None);
-  let subscription = observable.subscribe_with(SetSomeObserver { write });
-  use_subscription(subscription);
+  let owner = Owner::current();
+  use_subscription(observable.subscribe_with(SetSomeObserver { write, owner }));
   read
 }
