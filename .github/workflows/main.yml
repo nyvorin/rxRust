@@ -134,9 +134,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
+          targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
-      - run: cargo clippy -p rx-leptos --all-targets -- -D warnings
-      - run: cargo test -p rx-leptos
+      - run: cargo clippy -p rx-leptos -p leptos-csr-example --all-targets -- -D warnings
+      - run: cargo test -p rx-leptos -p leptos-csr-example
+      - run: cargo check -p leptos-csr-example --target wasm32-unknown-unknown
 
   ci:
     name: CI Status
