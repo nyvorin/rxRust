@@ -125,6 +125,7 @@ Operators that work with multiple source Observables to create a single Observab
 | `end_with` | Emits given values after the source completes. |
 | `exhaust_map` | Maps to inner Observables, ignoring items while an inner one is active. |
 | `share` / `share_replay` | Multicasts with reference counting; `share_replay` replays the last `n` items to late subscribers. |
+| `share_with` / `share_replay_with` / `share_connector` | Multicasting with RxJS 7 reset semantics (`ShareConfig`: reset on error, completion, ref count zero); `ShareConfig::replay()` is RxJS `shareReplay`. |
 | `publish_replay` / `publish_behavior` / `publish_last` | Connectable multicasting through a `ReplaySubject`, `BehaviorSubject`, or `AsyncSubject`. |
 
 ### Utility Operators

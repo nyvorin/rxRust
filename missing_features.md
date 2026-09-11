@@ -189,6 +189,7 @@ Specialty Observables that have more precisely-controlled subscription dynamics
 - [x] Publish — convert an ordinary Observable into a connectable Observable
 - [x] RefCount — make a Connectable Observable behave like an ordinary Observable
 - [x] Share — `publish().ref_count()` shortcut (`share`)
+  - `share_with(config)` / `share_replay_with(capacity, config)` / `share_connector(connector, config)`: RxJS 7 `share` with `resetOnError` / `resetOnComplete` / `resetOnRefCountZero`
 - [x] PublishBehavior / PublishLast — multicast through a `BehaviorSubject` or `AsyncSubject` (`publish_behavior`, `publish_last`)
 - [x] Replay — ensure that all observers see the same sequence of emitted items, even if they subscribe after the Observable has begun emitting items
   - `publish_replay(capacity)`, `share_replay(capacity)`
