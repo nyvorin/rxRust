@@ -104,6 +104,10 @@ use crate::ops::{
   scan::Scan,
   scan_map::ScanMap,
   sequence_equal::SequenceEqual,
+  share::{
+    Connector, PublishConnector, ReplayConnector, Share, ShareConfig, ShareReplayWithOf,
+    ShareState, ShareStateOf, ShareWithOf,
+  },
   single::{Single, SingleError},
   skip::Skip,
   skip_last::SkipLast,
@@ -2999,6 +3003,78 @@ pub trait Observable: Context {
       },
       connection,
     })
+  }
+
+  /// Multicast through a fresh publish subject per connection, with RxJS 7
+  /// reset semantics
+  ///
+  /// [`ShareConfig::default`] resets on error, on completion and when the
+  /// last subscriber leaves, so every cold start resubscribes to the source.
+  /// [`share`](Self::share) keeps its `publish().ref_count()` behaviour.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use std::{cell::RefCell, rc::Rc};
+  ///
+  /// use rxrust::prelude::*;
+  ///
+  /// let runs = Rc::new(RefCell::new(0));
+  /// let runs_c = runs.clone();
+  /// let shared = Local::from_iter(vec![1, 2])
+  ///   .tap(move |_| *runs_c.borrow_mut() += 1)
+  ///   .share_with(ShareConfig::default());
+  ///
+  /// shared.clone().subscribe(|_| {});
+  /// shared.subscribe(|_| {}); // the source completed: reset, so it runs again
+  /// assert_eq!(*runs.borrow(), 4);
+  /// ```
+  #[doc(alias = "share")]
+  fn share_with<'a>(self, config: ShareConfig) -> ShareWithOf<'a, Self> {
+    self.share_connector(PublishConnector::<PublishSubjectOf<'a, Self>>::default(), config)
+  }
+
+  /// Multicast through a fresh replay subject per connection, with RxJS 7
+  /// reset semantics
+  ///
+  /// `capacity` bounds the replay buffer (`None` for unbounded). With
+  /// [`ShareConfig::replay`] this is RxJS `shareReplay(n)`: the connection
+  /// and buffer outlive the subscribers and completion is replayed;
+  /// [`ShareConfig::default`] gives `shareReplay({ refCount: true })`.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use std::{cell::RefCell, rc::Rc};
+  ///
+  /// use rxrust::prelude::*;
+  ///
+  /// let shared = Local::from_iter(vec![1, 2, 3]).share_replay_with(Some(2), ShareConfig::replay());
+  /// shared.clone().subscribe(|_| {});
+  ///
+  /// let late = Rc::new(RefCell::new(Vec::new()));
+  /// let sink = late.clone();
+  /// shared.subscribe(move |v| sink.borrow_mut().push(v));
+  /// assert_eq!(*late.borrow(), vec![2, 3]);
+  /// ```
+  #[doc(alias = "shareReplay")]
+  fn share_replay_with<'a>(
+    self, capacity: Option<usize>, config: ShareConfig,
+  ) -> ShareReplayWithOf<'a, Self> {
+    self.share_connector(ReplayConnector::<ReplaySubjectOf<'a, Self>>::new(capacity), config)
+  }
+
+  /// Multicast through subjects produced by `connector`, with RxJS 7 reset
+  /// semantics; the general form of [`share_with`](Self::share_with) and
+  /// [`share_replay_with`](Self::share_replay_with)
+  fn share_connector<Conn>(
+    self, connector: Conn, config: ShareConfig,
+  ) -> Self::With<Share<Self::Inner, ShareStateOf<Self, Conn>>>
+  where
+    Conn: Connector,
+  {
+    let state = Self::RcMut::from(ShareState::new(connector, config));
+    self.transform(|source| Share { source, state })
   }
 
   /// Multicast through an `AsyncSubject`: subscribers receive only the
