@@ -139,6 +139,16 @@ jobs:
       - run: cargo clippy -p rx-leptos -p leptos-csr-example --all-targets -- -D warnings
       - run: cargo test -p rx-leptos -p leptos-csr-example
       - run: cargo check -p leptos-csr-example --target wasm32-unknown-unknown
+      # The SSR example is its own workspace (Leptos csr/ssr features must not unify).
+      - name: SSR example (server)
+        working-directory: examples/leptos-ssr
+        run: |
+          cargo clippy --features ssr --all-targets -- -D warnings
+          cargo test --features ssr --test ssr
+          cargo test --test model
+      - name: SSR example (hydrate, wasm32)
+        working-directory: examples/leptos-ssr
+        run: cargo clippy --features hydrate --lib --target wasm32-unknown-unknown -- -D warnings
 
   ci:
     name: CI Status

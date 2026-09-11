@@ -129,7 +129,10 @@ streams DOM events, and `use_subject` / `use_subscription` tie subjects and
 subscriptions to a component's lifetime. Signal changes are delivered on the
 app executor's next tick, exactly when a Leptos effect would run. [`examples/leptos-csr`](examples/leptos-csr)
 is a runnable client-side app (typeahead with cancellation, stopwatch, mouse
-tracker) whose reactive models are tested natively.
+tracker) whose reactive models are tested natively, and
+[`examples/leptos-ssr`](examples/leptos-ssr) is the same app server-rendered
+and hydrated with `cargo leptos`, showing the one SSR rule: create signals at
+component level, wire rx pipelines inside `Effect::new`.
 
 ```rust,ignore
 let query = RwSignal::new(String::new());

@@ -11,6 +11,7 @@ use reactive_graph::{
   graph::{
     AnySource, AnySubscriber, ReactiveNode, Source, Subscriber, ToAnySubscriber, WithObserver,
   },
+  owner::Owner,
   traits::Get,
 };
 use rxrust::{
@@ -21,6 +22,8 @@ use rxrust::{
   subscription::Subscription,
 };
 use send_wrapper::SendWrapper;
+
+use crate::to_signal::with_owner;
 
 /// An observable that mirrors a signal (or memo, or any other `Get` type).
 ///
@@ -106,6 +109,9 @@ struct Node<S, O> {
   graph: RwLock<Graph>,
   /// `None` while a run is in progress and once detached.
   bridge: SendWrapper<RefCell<Option<Bridge<S, O>>>>,
+  /// The reactive owner current at subscribe time; runs re-enter it so
+  /// signal access works under `sandboxed-arenas` (Leptos server features).
+  owner: Option<Owner>,
 }
 
 trait Detach {
@@ -123,6 +129,7 @@ where
       weak: weak.clone(),
       graph: RwLock::new(Graph { dirty: true, ..Graph::default() }),
       bridge: SendWrapper::new(RefCell::new(None)),
+      owner: Owner::current(),
     });
     *node.bridge.borrow_mut() = Some(Bridge { signal, observer, _keep_alive: node.clone() });
     node.run();
@@ -157,7 +164,7 @@ where
     Executor::spawn_local(async move {
       if let Some(node) = weak.upgrade() {
         node.graph().scheduled = false;
-        node.run();
+        with_owner(&node.owner, || node.run());
       }
     });
   }

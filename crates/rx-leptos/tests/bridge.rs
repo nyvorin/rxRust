@@ -8,7 +8,7 @@ use any_spawner::Executor;
 use reactive_graph::{
   computed::Memo,
   owner::Owner,
-  signal::RwSignal,
+  signal::{RwSignal, signal},
   traits::{Get, GetUntracked, Set},
 };
 use rx_leptos::prelude::*;
@@ -297,4 +297,29 @@ fn use_subject_completes_subscribers_on_owner_cleanup() {
   assert_eq!(clicks.inner.subscriber_count(), 0);
   clicks.next(3); // completed subject: dropped quietly
   assert_eq!(*seen.borrow(), vec![1, 2]);
+}
+
+#[test]
+fn feed_signal_writes_into_an_existing_signal_until_cleanup() {
+  executor();
+  let owner = Owner::new();
+  let input = RwSignal::new(1);
+  let (doubled, set_doubled) = signal(0);
+
+  owner.with(|| {
+    input
+      .to_observable()
+      .map(|v: i32| v * 2)
+      .feed(set_doubled)
+  });
+  assert_eq!(doubled.get_untracked(), 2, "feeds synchronously on subscribe");
+
+  input.set(4);
+  Executor::poll_local();
+  assert_eq!(doubled.get_untracked(), 8);
+
+  owner.cleanup();
+  input.set(5);
+  Executor::poll_local();
+  assert_eq!(doubled.get_untracked(), 8, "the signal outlives the owner but stops updating");
 }
