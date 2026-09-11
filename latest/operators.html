@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-cad3aa4e.js";
+            window.path_to_searchindex_js = "searchindex-cb0780aa.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0ee8fd1e.js"></script>
@@ -235,7 +235,8 @@
 <tr><td style="text-align: left"><code>filter_map</code></td><td style="text-align: left">Maps and filters items in one step (using <code>Option</code>).</td></tr>
 <tr><td style="text-align: left"><code>scan</code></td><td style="text-align: left">Applies an accumulator function to each item, emitting each intermediate result.</td></tr>
 <tr><td style="text-align: left"><code>reduce</code></td><td style="text-align: left">Applies an accumulator function and emits only the final result.</td></tr>
-<tr><td style="text-align: left"><code>flat_map</code></td><td style="text-align: left">Projects each item to an Observable, then merges them all.</td></tr>
+<tr><td style="text-align: left"><code>flat_map</code> / <code>merge_map</code></td><td style="text-align: left">Projects each item to an Observable, then merges them all.</td></tr>
+<tr><td style="text-align: left"><code>switch_all</code> / <code>exhaust_all</code></td><td style="text-align: left">Flatten an Observable of Observables by switching to, or ignoring, new inners.</td></tr>
 <tr><td style="text-align: left"><code>concat_map</code></td><td style="text-align: left">Projects each item to an Observable, then concatenates them (preserving order).</td></tr>
 <tr><td style="text-align: left"><code>buffer</code></td><td style="text-align: left">Collects items into a <code>Vec</code> until a notifier emits.</td></tr>
 <tr><td style="text-align: left"><code>buffer_count</code></td><td style="text-align: left">Collects items into a <code>Vec</code> of a specific size.</td></tr>
@@ -243,8 +244,10 @@
 <tr><td style="text-align: left"><code>pairwise</code></td><td style="text-align: left">Groups consecutive emissions into pairs <code>(prev, current)</code>.</td></tr>
 <tr><td style="text-align: left"><code>group_by</code></td><td style="text-align: left">Divides an Observable into a set of Observables that each emit a different group of items.</td></tr>
 <tr><td style="text-align: left"><code>window</code> / <code>window_count</code> / <code>window_time</code></td><td style="text-align: left">Splits the source into windows, each an Observable of its own.</td></tr>
+<tr><td style="text-align: left"><code>window_when</code> / <code>window_toggle</code></td><td style="text-align: left">Windows closed by selector-provided Observables; <code>window_toggle</code> windows may overlap.</td></tr>
 <tr><td style="text-align: left"><code>buffer_when</code> / <code>buffer_toggle</code></td><td style="text-align: left">Buffers closed by selector-provided Observables; <code>buffer_toggle</code> buffers may overlap.</td></tr>
 <tr><td style="text-align: left"><code>merge_scan</code></td><td style="text-align: left">Accumulates through Observables returned by the accumulator function.</td></tr>
+<tr><td style="text-align: left"><code>switch_scan</code></td><td style="text-align: left">Like <code>merge_scan</code>, but each item cancels the previous inner Observable.</td></tr>
 <tr><td style="text-align: left"><code>expand</code></td><td style="text-align: left">Recursively projects every emitted item and merges the results.</td></tr>
 </tbody>
 </table>
@@ -269,8 +272,10 @@
 <tr><td style="text-align: left"><code>distinct</code></td><td style="text-align: left">Suppresses duplicate items.</td></tr>
 <tr><td style="text-align: left"><code>distinct_until_changed</code></td><td style="text-align: left">Suppresses consecutive duplicate items.</td></tr>
 <tr><td style="text-align: left"><code>debounce</code></td><td style="text-align: left">Emits an item only after a specific timespan has passed without another emission.</td></tr>
+<tr><td style="text-align: left"><code>debounce_when</code></td><td style="text-align: left">Like <code>debounce</code>, with a per-item duration Observable.</td></tr>
 <tr><td style="text-align: left"><code>throttle</code></td><td style="text-align: left">Emits the first item emitted during a time window.</td></tr>
 <tr><td style="text-align: left"><code>sample</code></td><td style="text-align: left">Emits the most recent item when another Observable emits.</td></tr>
+<tr><td style="text-align: left"><code>sample_time</code></td><td style="text-align: left">Emits the most recent item once per period.</td></tr>
 <tr><td style="text-align: left"><code>last</code></td><td style="text-align: left">Emits only the last item.</td></tr>
 <tr><td style="text-align: left"><code>contains</code></td><td style="text-align: left">Emits true if the Observable emits a specific item.</td></tr>
 <tr><td style="text-align: left"><code>every</code></td><td style="text-align: left">Emits <code>true</code> if every item satisfies a predicate, <code>false</code> on the first that does not.</td></tr>
