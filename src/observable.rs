@@ -60,6 +60,7 @@ use crate::ops::{
   combine_latest::CombineLatest,
   contains::Contains,
   debounce::Debounce,
+  debounce_when::DebounceWhen,
   default_if_empty::DefaultIfEmpty,
   delay::{Delay, DelaySubscriptionOp},
   delay_when::DelayWhen,
@@ -99,6 +100,7 @@ use crate::ops::{
   repeat::Repeat,
   retry::{Retry, RetryPolicy},
   sample::Sample,
+  sample::SampleTimer,
   scan::Scan,
   scan_map::ScanMap,
   sequence_equal::SequenceEqual,
@@ -110,6 +112,7 @@ use crate::ops::{
   start_with::StartWith,
   subscribe_on::SubscribeOn,
   switch_map::SwitchMap,
+  switch_scan::SwitchScan,
   take::Take,
   take_last::TakeLast,
   take_until::TakeUntil,
@@ -122,6 +125,8 @@ use crate::ops::{
   timestamp::Timestamp,
   window::{Window, WindowSubjectOf, WindowTimer, never_errors},
   window_count::WindowCount,
+  window_toggle::WindowToggle,
+  window_when::WindowWhen,
   with_latest_from::WithLatestFrom,
   zip::Zip,
 };
@@ -498,6 +503,33 @@ pub trait Observable: Context {
     Out: Context<Inner: ObservableType>,
   {
     self.transform(|source| MergeScan { source, func: f, seed })
+  }
+
+  /// Like `scan`, but the accumulator returns an observable; each source item
+  /// unsubscribes the previous inner observable (switch semantics) and every
+  /// inner emission becomes the new accumulator and is emitted
+  ///
+  /// Completes once the source and the current inner have completed.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let mut totals = Vec::new();
+  /// Local::from_iter(vec![1, 2, 3])
+  ///   .switch_scan(0, |acc: i32, x: i32| Local::of(acc + x))
+  ///   .subscribe(|v| totals.push(v));
+  /// assert_eq!(totals, vec![1, 3, 6]);
+  /// ```
+  #[doc(alias = "switchScan")]
+  fn switch_scan<Acc, F, Out>(self, seed: Acc, f: F) -> Self::With<SwitchScan<Self::Inner, F, Acc>>
+  where
+    Acc: Clone,
+    F: for<'a> FnMut(Acc, Self::Item<'a>) -> Out,
+    Out: Context<Inner: ObservableType<Err = Self::Err> + 'static>,
+  {
+    self.transform(|source| SwitchScan { source, func: f, seed })
   }
 
   /// Apply an accumulator function and emit each intermediate result
@@ -1109,6 +1141,16 @@ pub trait Observable: Context {
     self.transform(|core| Merge { source1: core, source2: other.into_inner() })
   }
 
+  /// RxJS name for [`merge`](Self::merge)
+  #[doc(alias = "mergeWith")]
+  fn merge_with<'a, S2>(self, other: S2) -> Self::With<Merge<Self::Inner, S2::Inner>>
+  where
+    Self: 'a,
+    S2: Observable<Inner: ObservableType<Item<'a> = Self::Item<'a>, Err = Self::Err>> + 'a,
+  {
+    self.merge(other)
+  }
+
   /// Mirror whichever of two observables emits first
   ///
   /// Both are subscribed; the first to emit an item, error, or completion
@@ -1133,6 +1175,16 @@ pub trait Observable: Context {
     self.transform(|source_a| Race { source_a, source_b: other.into_inner() })
   }
 
+  /// RxJS name for [`race`](Self::race)
+  #[doc(alias = "raceWith")]
+  fn race_with<'a, S2>(self, other: S2) -> Self::With<Race<Self::Inner, S2::Inner>>
+  where
+    Self: 'a,
+    S2: Observable<Inner: ObservableType<Item<'a> = Self::Item<'a>, Err = Self::Err>> + 'a,
+  {
+    self.race(other)
+  }
+
   /// Combine the latest values from two observables
   ///
   /// This operator combines the latest values from two observables using a
@@ -1152,6 +1204,49 @@ pub trait Observable: Context {
     F: for<'a> FnMut(Self::Item<'a>, S2::Item<'a>) -> OutputItem,
   {
     self.transform(|core| CombineLatest { source_a: core, source_b: other.into_inner(), binary_op })
+  }
+
+  /// Combine with another observable into pairs of the latest values from
+  /// each (RxJS `combineLatestWith`)
+  ///
+  /// Equivalent to `combine_latest(other, |a, b| (a, b))`.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use std::{cell::RefCell, convert::Infallible, rc::Rc};
+  ///
+  /// use rxrust::prelude::*;
+  ///
+  /// let seen = Rc::new(RefCell::new(Vec::new()));
+  /// let sink = seen.clone();
+  /// let mut a = Local::subject::<i32, Infallible>();
+  /// let mut b = Local::subject::<&'static str, Infallible>();
+  ///
+  /// a.clone()
+  ///   .combine_latest_with(b.clone())
+  ///   .subscribe(move |pair| sink.borrow_mut().push(pair));
+  ///
+  /// a.next(1);
+  /// b.next("x");
+  /// a.next(2);
+  /// assert_eq!(*seen.borrow(), vec![(1, "x"), (2, "x")]);
+  /// ```
+  #[doc(alias = "combineLatestWith")]
+  #[allow(clippy::type_complexity)]
+  fn combine_latest_with<S2, A, B>(
+    self, other: S2,
+  ) -> Self::With<CombineLatest<Self::Inner, S2::Inner, fn(A, B) -> (A, B)>>
+  where
+    Self: for<'a> Observable<Item<'a> = A> + 'static,
+    S2: Observable<Inner: ObservableType<Err = <Self as Observable>::Err>>
+      + for<'a> Observable<Item<'a> = B>
+      + 'static,
+    A: 'static,
+    B: 'static,
+  {
+    fn pair<A, B>(a: A, b: B) -> (A, B) { (a, b) }
+    self.combine_latest(other, pair::<A, B> as fn(A, B) -> (A, B))
   }
 
   /// Combine each emission from this observable with the latest value from
@@ -1495,6 +1590,46 @@ pub trait Observable: Context {
   fn debounce(self, duration: Duration) -> Self::With<Debounce<Self::Inner, Self::Scheduler>> {
     let scheduler = self.scheduler().clone();
     self.transform(|core| Debounce { source: core, duration, scheduler })
+  }
+
+  /// Emit an item only when the observable `selector` returns for it emits
+  /// or completes before another item arrives (RxJS `debounce` with a
+  /// duration selector)
+  ///
+  /// A newer item cancels the pending one and its duration. Source
+  /// completion emits the pending item first. For a fixed duration use
+  /// [`debounce`](Self::debounce).
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use std::{cell::RefCell, convert::Infallible, rc::Rc};
+  ///
+  /// use rxrust::prelude::*;
+  ///
+  /// let seen = Rc::new(RefCell::new(Vec::new()));
+  /// let sink = seen.clone();
+  /// let mut source = Local::subject::<i32, Infallible>();
+  /// let duration = Local::subject::<(), Infallible>();
+  /// let duration_c = duration.clone();
+  ///
+  /// source
+  ///   .clone()
+  ///   .debounce_when(move |_v: &i32| duration_c.clone())
+  ///   .subscribe(move |v| sink.borrow_mut().push(v));
+  ///
+  /// source.next(1);
+  /// source.next(2); // 1 is dropped: its duration never fired
+  /// duration.clone().next(());
+  /// assert_eq!(*seen.borrow(), vec![2]);
+  /// ```
+  #[doc(alias = "debounce")]
+  fn debounce_when<F, Out>(self, selector: F) -> Self::With<DebounceWhen<Self::Inner, F>>
+  where
+    F: for<'a> FnMut(&Self::Item<'a>) -> Out,
+    Out: Context<Inner: ObservableType>,
+  {
+    self.transform(|source| DebounceWhen { source, selector })
   }
 
   /// Emit a value only after a quiet period has passed, using a custom
@@ -1870,6 +2005,44 @@ pub trait Observable: Context {
     self.transform(|source| Sample { source, sampler: sampler.into_inner() })
   }
 
+  /// Emit the most recent source item once per `period`, on the context's
+  /// scheduler (RxJS `sampleTime`)
+  ///
+  /// A period without new items emits nothing. Completes when the source
+  /// completes. See [`sample`](Self::sample) for an arbitrary sampler.
+  ///
+  /// # Examples
+  ///
+  /// ```rust,no_run
+  /// use std::time::Duration;
+  ///
+  /// use rxrust::prelude::*;
+  ///
+  /// Local::interval(Duration::from_millis(10))
+  ///   .sample_time(Duration::from_millis(100))
+  ///   .subscribe(|tick| println!("latest tick: {tick}"));
+  /// ```
+  #[doc(alias = "sampleTime")]
+  #[allow(clippy::type_complexity)]
+  fn sample_time(
+    self, period: Duration,
+  ) -> Self::With<Sample<Self::Inner, SampleTimer<Self::Scheduler, Self::Err>>> {
+    let scheduler = self.scheduler().clone();
+    self.sample_time_with(period, scheduler)
+  }
+
+  /// [`sample_time`](Self::sample_time) with an explicit scheduler
+  #[allow(clippy::type_complexity)]
+  fn sample_time_with<Sch>(
+    self, period: Duration, scheduler: Sch,
+  ) -> Self::With<Sample<Self::Inner, SampleTimer<Sch, Self::Err>>> {
+    let timer = MapErr {
+      source: Interval { period, scheduler },
+      func: never_errors::<Self::Err> as fn(std::convert::Infallible) -> Self::Err,
+    };
+    self.transform(|source| Sample { source, sampler: timer })
+  }
+
   /// Combine items from two observables pairwise
   ///
   /// Zip combines items from this observable with items from another observable
@@ -1896,6 +2069,15 @@ pub trait Observable: Context {
     B: Observable<Err = Self::Err, Inner: ObservableType>,
   {
     self.transform(|source_a| Zip { source_a, source_b: other.into_inner() })
+  }
+
+  /// RxJS name for [`zip`](Self::zip)
+  #[doc(alias = "zipWith")]
+  fn zip_with<B>(self, other: B) -> Self::With<Zip<Self::Inner, B::Inner>>
+  where
+    B: Observable<Err = Self::Err, Inner: ObservableType>,
+  {
+    self.zip(other)
   }
 
   /// Perform a side effect for each emission
@@ -2175,6 +2357,30 @@ pub trait Observable: Context {
   /// ```
   fn collect_into<C>(self, initial: C) -> Self::With<Collect<Self::Inner, C>> {
     self.transform(|source| Collect { source, collection: initial })
+  }
+
+  /// Collect every item into a `Vec` emitted on completion (RxJS `toArray`)
+  ///
+  /// Equivalent to `collect::<Vec<_>>()`.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let mut all = Vec::new();
+  /// Local::from_iter(1..=3)
+  ///   .to_vec()
+  ///   .subscribe(|v| all = v);
+  /// assert_eq!(all, vec![1, 2, 3]);
+  /// ```
+  #[doc(alias = "toArray")]
+  fn to_vec<Item>(self) -> Self::With<Collect<Self::Inner, Vec<Item>>>
+  where
+    Self: for<'a> Observable<Item<'a> = Item>,
+    Item: 'static,
+  {
+    self.collect_into(Vec::new())
   }
 
   /// Buffer items until a notifier observable emits
@@ -2494,6 +2700,105 @@ pub trait Observable: Context {
       func: never_errors::<Self::Err> as fn(std::convert::Infallible) -> Self::Err,
     };
     self.transform(|source| Window::new(source, timer))
+  }
+
+  /// Overlapping windows: each item from `openings` opens a window, closed
+  /// when the observable `closing_selector` returns for that opening emits or
+  /// completes
+  ///
+  /// Each window is a `Subject` wrapped in the context and is emitted as it
+  /// opens. Source items go into every open window, so items must be `Clone`;
+  /// source completion completes the open windows.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use std::{cell::RefCell, convert::Infallible, rc::Rc};
+  ///
+  /// use rxrust::prelude::*;
+  ///
+  /// let seen = Rc::new(RefCell::new(Vec::new()));
+  /// let sink = seen.clone();
+  /// let mut source = Local::subject::<i32, Infallible>();
+  /// let mut openings = Local::subject::<(), Infallible>();
+  /// let closing = Local::subject::<(), Infallible>();
+  /// let closing_c = closing.clone();
+  ///
+  /// source
+  ///   .clone()
+  ///   .window_toggle(openings.clone(), move |_| closing_c.clone())
+  ///   .subscribe(move |w: Local<_>| {
+  ///     let sink = sink.clone();
+  ///     w.subscribe(move |v| sink.borrow_mut().push(v));
+  ///   });
+  ///
+  /// source.next(0); // no window open yet
+  /// openings.next(());
+  /// source.next(1);
+  /// closing.clone().next(());
+  /// source.next(2); // the window is closed
+  /// assert_eq!(*seen.borrow(), vec![1]);
+  /// ```
+  #[doc(alias = "windowToggle")]
+  #[allow(clippy::type_complexity)]
+  fn window_toggle<'a, Op, F, Out>(
+    self, openings: Op, closing_selector: F,
+  ) -> Self::With<WindowToggle<Self::Inner, Op::Inner, F, WindowSubjectOf<'a, Self>>>
+  where
+    Op: Observable<Err = Self::Err, Inner: ObservableType>,
+    F: for<'b> FnMut(Op::Item<'b>) -> Out,
+    Out: Context<Inner: ObservableType>,
+  {
+    self.transform(|source| WindowToggle::new(source, openings.into_inner(), closing_selector))
+  }
+
+  /// Consecutive windows, each closed by the observable `closing_selector`
+  /// returns when the window opens
+  ///
+  /// The first window opens at subscribe. A closing emission completes the
+  /// window and opens the next; closing completion keeps the window open, as
+  /// in RxJS. Each window is a `Subject` wrapped in the context.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use std::{cell::RefCell, convert::Infallible, rc::Rc};
+  ///
+  /// use rxrust::prelude::*;
+  ///
+  /// let closings = Rc::new(RefCell::new(Vec::new()));
+  /// let windows = Rc::new(RefCell::new(0));
+  /// let (pool, count) = (closings.clone(), windows.clone());
+  /// let mut source = Local::subject::<i32, Infallible>();
+  ///
+  /// source
+  ///   .clone()
+  ///   .window_when(move || {
+  ///     let closing = Local::subject::<(), Infallible>();
+  ///     pool.borrow_mut().push(closing.clone());
+  ///     closing
+  ///   })
+  ///   .subscribe(move |w: Local<_>| {
+  ///     *count.borrow_mut() += 1;
+  ///     w.subscribe(|v| println!("{v}"));
+  ///   });
+  ///
+  /// source.next(1);
+  /// let mut first = closings.borrow()[0].clone();
+  /// first.next(()); // closes the first window, opens the second
+  /// source.next(2);
+  /// assert_eq!(*windows.borrow(), 2);
+  /// ```
+  #[doc(alias = "windowWhen")]
+  #[allow(clippy::type_complexity)]
+  fn window_when<'a, F, Out>(
+    self, closing_selector: F,
+  ) -> Self::With<WindowWhen<Self::Inner, F, WindowSubjectOf<'a, Self>>>
+  where
+    F: FnMut() -> Out,
+    Out: Context<Inner: ObservableType>,
+  {
+    self.transform(|source| WindowWhen::new(source, closing_selector))
   }
 
   /// Convert this observable into a ConnectableObservable using the specified
@@ -3279,6 +3584,16 @@ pub trait Observable: Context {
     self.transform(|source| FlatMap::new(source, f, usize::MAX))
   }
 
+  /// RxJS name for [`flat_map`](Self::flat_map)
+  #[doc(alias = "mergeMap")]
+  fn merge_map<F, Inner>(self, f: F) -> Self::With<FlatMap<Self::Inner, F, Inner>>
+  where
+    F: for<'a> FnMut(Self::Item<'a>) -> Inner,
+    Inner: Context<Inner: ObservableType<Err = Self::Err>>,
+  {
+    self.flat_map(f)
+  }
+
   /// Map each item into an inner observable and concatenate the results.
   ///
   /// This is equivalent to `map(f).concat_all()`.
@@ -3340,6 +3655,32 @@ pub trait Observable: Context {
     self.transform(|source| SwitchMap { source, func: f })
   }
 
+  /// Flatten an observable of observables by switching to each new inner and
+  /// unsubscribing the previous one (RxJS `switchAll`)
+  ///
+  /// Equivalent to `switch_map(|inner| inner)`.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let mut seen = Vec::new();
+  /// Local::from_iter(vec![Local::of(1), Local::of(2)])
+  ///   .switch_all()
+  ///   .subscribe(|v| seen.push(v));
+  /// assert_eq!(seen, vec![1, 2]);
+  /// ```
+  #[doc(alias = "switchAll")]
+  #[allow(clippy::type_complexity)]
+  fn switch_all<Item>(self) -> Self::With<SwitchMap<Self::Inner, fn(Item) -> Item>>
+  where
+    Self: for<'a> Observable<Item<'a> = Item> + 'static,
+    Item: Context<Inner: ObservableType<Err = <Self as Observable>::Err> + 'static> + 'static,
+  {
+    self.switch_map(std::convert::identity::<Item> as fn(Item) -> Item)
+  }
+
   /// Map each item to an inner observable, ignoring items that arrive while
   /// an inner observable is still active
   ///
@@ -3360,6 +3701,32 @@ pub trait Observable: Context {
     Out: Context<Inner: ObservableType<Err = Self::Err> + 'static>,
   {
     self.transform(|source| ExhaustMap { source, func: f })
+  }
+
+  /// Flatten an observable of observables, ignoring inners that arrive while
+  /// one is active (RxJS `exhaustAll`)
+  ///
+  /// Equivalent to `exhaust_map(|inner| inner)`.
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use rxrust::prelude::*;
+  ///
+  /// let mut seen = Vec::new();
+  /// Local::from_iter(vec![Local::of(1), Local::of(2)])
+  ///   .exhaust_all()
+  ///   .subscribe(|v| seen.push(v));
+  /// assert_eq!(seen, vec![1, 2]);
+  /// ```
+  #[doc(alias = "exhaustAll")]
+  #[allow(clippy::type_complexity)]
+  fn exhaust_all<Item>(self) -> Self::With<ExhaustMap<Self::Inner, fn(Item) -> Item>>
+  where
+    Self: for<'a> Observable<Item<'a> = Item> + 'static,
+    Item: Context<Inner: ObservableType<Err = <Self as Observable>::Err> + 'static> + 'static,
+  {
+    self.exhaust_map(std::convert::identity::<Item> as fn(Item) -> Item)
   }
 
   /// Recursively project every emitted item through `f` and merge the results

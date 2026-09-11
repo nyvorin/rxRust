@@ -7,6 +7,7 @@ use crate::{
   context::{Context, RcDeref, RcDerefMut},
   observable::{CoreObservable, ObservableType},
   observer::Observer,
+  scheduler::{Duration, Instant},
 };
 
 /// A recorded terminal event.
@@ -20,26 +21,59 @@ pub enum Terminal<Err> {
 
 /// Shared replay state.
 pub struct ReplayBuffer<Item, Err> {
-  items: VecDeque<Item>,
+  items: VecDeque<(Instant, Item)>,
   capacity: Option<usize>,
+  /// Items older than this are not replayed (RxJS `windowTime`).
+  window: Option<Duration>,
   terminal: Option<Terminal<Err>>,
 }
 
 impl<Item, Err> ReplayBuffer<Item, Err> {
-  fn new(capacity: Option<usize>) -> Self {
-    Self { items: VecDeque::new(), capacity, terminal: None }
+  fn new(capacity: Option<usize>, window: Option<Duration>) -> Self {
+    Self { items: VecDeque::new(), capacity, window, terminal: None }
   }
 
   fn push(&mut self, item: Item) {
     if self.capacity == Some(0) {
       return;
     }
-    self.items.push_back(item);
+    let now = Instant::now();
+    self.evict_expired(now);
+    self.items.push_back((now, item));
     if let Some(cap) = self.capacity {
       while self.items.len() > cap {
         self.items.pop_front();
       }
     }
+  }
+
+  /// Drop items that fell out of the time window.
+  fn evict_expired(&mut self, now: Instant) {
+    let Some(window) = self.window else { return };
+    while let Some((at, _)) = self.items.front() {
+      if now.saturating_duration_since(*at) >= window {
+        self.items.pop_front();
+      } else {
+        break;
+      }
+    }
+  }
+
+  fn replayable(&self) -> Vec<Item>
+  where
+    Item: Clone,
+  {
+    let now = Instant::now();
+    self
+      .items
+      .iter()
+      .filter(|(at, _)| {
+        self
+          .window
+          .is_none_or(|window| now.saturating_duration_since(*at) < window)
+      })
+      .map(|(_, item)| item.clone())
+      .collect()
   }
 }
 
@@ -83,7 +117,12 @@ where
   /// Creates a subject that replays up to `capacity` items, or every item
   /// when `capacity` is `None`.
   pub fn new(capacity: Option<usize>) -> Self {
-    Self { subject: Subject::default(), buffer: B::from(ReplayBuffer::new(capacity)) }
+    Self { subject: Subject::default(), buffer: B::from(ReplayBuffer::new(capacity, None)) }
+  }
+
+  /// A replay subject that also forgets items older than `window`.
+  pub fn new_with_window(capacity: Option<usize>, window: Duration) -> Self {
+    Self { subject: Subject::default(), buffer: B::from(ReplayBuffer::new(capacity, Some(window))) }
   }
 }
 
@@ -162,7 +201,7 @@ where
   fn subscribe(self, mut observer: C) -> Self::Unsub {
     let (items, terminal) = {
       let buffer = self.buffer.rc_deref();
-      (buffer.items.iter().cloned().collect::<Vec<_>>(), buffer.terminal.clone())
+      (buffer.replayable(), buffer.terminal.clone())
     };
     for item in items {
       if observer.is_closed() {
@@ -293,5 +332,59 @@ mod tests {
       .subscribe(move |v| seen_c.lock().unwrap().push(v));
 
     assert_eq!(*seen.lock().unwrap(), vec![1, 2]);
+  }
+}
+
+#[cfg(test)]
+mod window_tests {
+  use std::{cell::RefCell, convert::Infallible, rc::Rc};
+
+  use crate::{prelude::*, scheduler::Duration};
+
+  #[rxrust_macro::test]
+  fn test_replay_window_keeps_recent_items() {
+    let seen = Rc::new(RefCell::new(Vec::new()));
+    let sink = seen.clone();
+    let mut subject =
+      Local::replay_subject_with_window::<i32, Infallible>(None, Duration::from_secs(3600));
+
+    subject.next(1);
+    subject.next(2);
+    subject
+      .clone()
+      .subscribe(move |v| sink.borrow_mut().push(v));
+    subject.next(3);
+    assert_eq!(*seen.borrow(), vec![1, 2, 3]);
+  }
+
+  #[rxrust_macro::test]
+  fn test_replay_window_forgets_expired_items() {
+    let seen = Rc::new(RefCell::new(Vec::new()));
+    let sink = seen.clone();
+    // A zero window: everything buffered is already too old to replay.
+    let mut subject = Local::replay_subject_with_window::<i32, Infallible>(None, Duration::ZERO);
+
+    subject.next(1);
+    subject.next(2);
+    subject
+      .clone()
+      .subscribe(move |v| sink.borrow_mut().push(v));
+    subject.next(3);
+    assert_eq!(*seen.borrow(), vec![3], "only live items reach a late subscriber");
+  }
+
+  #[rxrust_macro::test]
+  fn test_replay_window_respects_capacity() {
+    let seen = Rc::new(RefCell::new(Vec::new()));
+    let sink = seen.clone();
+    let mut subject =
+      Local::replay_subject_with_window::<i32, Infallible>(Some(1), Duration::from_secs(3600));
+
+    subject.next(1);
+    subject.next(2);
+    subject
+      .clone()
+      .subscribe(move |v| sink.borrow_mut().push(v));
+    assert_eq!(*seen.borrow(), vec![2]);
   }
 }

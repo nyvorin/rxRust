@@ -56,7 +56,8 @@ Operators that transform the items emitted by an Observable.
 | `filter_map` | Maps and filters items in one step (using `Option`). |
 | `scan` | Applies an accumulator function to each item, emitting each intermediate result. |
 | `reduce` | Applies an accumulator function and emits only the final result. |
-| `flat_map` | Projects each item to an Observable, then merges them all. |
+| `flat_map` / `merge_map` | Projects each item to an Observable, then merges them all. |
+| `switch_all` / `exhaust_all` | Flatten an Observable of Observables by switching to, or ignoring, new inners. |
 | `concat_map` | Projects each item to an Observable, then concatenates them (preserving order). |
 | `buffer` | Collects items into a `Vec` until a notifier emits. |
 | `buffer_count` | Collects items into a `Vec` of a specific size. |
@@ -64,8 +65,10 @@ Operators that transform the items emitted by an Observable.
 | `pairwise` | Groups consecutive emissions into pairs `(prev, current)`. |
 | `group_by` | Divides an Observable into a set of Observables that each emit a different group of items. |
 | `window` / `window_count` / `window_time` | Splits the source into windows, each an Observable of its own. |
+| `window_when` / `window_toggle` | Windows closed by selector-provided Observables; `window_toggle` windows may overlap. |
 | `buffer_when` / `buffer_toggle` | Buffers closed by selector-provided Observables; `buffer_toggle` buffers may overlap. |
 | `merge_scan` | Accumulates through Observables returned by the accumulator function. |
+| `switch_scan` | Like `merge_scan`, but each item cancels the previous inner Observable. |
 | `expand` | Recursively projects every emitted item and merges the results. |
 
 ### Filtering Operators
@@ -86,8 +89,10 @@ Operators that selectively emit items from the source Observable.
 | `distinct` | Suppresses duplicate items. |
 | `distinct_until_changed` | Suppresses consecutive duplicate items. |
 | `debounce` | Emits an item only after a specific timespan has passed without another emission. |
+| `debounce_when` | Like `debounce`, with a per-item duration Observable. |
 | `throttle` | Emits the first item emitted during a time window. |
 | `sample` | Emits the most recent item when another Observable emits. |
+| `sample_time` | Emits the most recent item once per period. |
 | `last` | Emits only the last item. |
 | `contains` | Emits true if the Observable emits a specific item. |
 | `every` | Emits `true` if every item satisfies a predicate, `false` on the first that does not. |

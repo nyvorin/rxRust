@@ -34,6 +34,7 @@ Welcome to rxRust v1.0! This release represents a complete reimplementation of t
     *   **Utility**: `retry`, `tap`, `delay`, `observe_on`, `subscribe_on`.
 *   **WASM Support**: First-class support for WebAssembly via `Local` context, enabling high-performance reactive web apps.
 *   **Subject Improvements**: `Subject` and `BehaviorSubject` now support "Multicasting" and adapt their internal locking strategy based on the Context they are created in.
+*   **RxJS Parity, Tier 3**: `switch_scan`, `window_toggle`, `window_when`, `debounce_when` (duration selector), `sample_time`, `replay_subject_with_window` (time-windowed replay), plus RxJS-named entry points `merge_map`, `merge_with`, `zip_with`, `race_with`, `combine_latest_with`, `switch_all`, `exhaust_all`, `to_vec`, and `#[doc(alias)]` RxJS names on the new items.
 *   **RxJS Parity, Tier 2b**: `window`, `window_count`, `window_time`, `buffer_when`, `buffer_toggle`, `delay_when`, `merge_scan`, `expand`.
 *   **RxJS Parity, Tier 2a**: `partition`, `sequence_equal`, `single` with `SingleError`, `on_error_resume_next`, and the factories `generate`, `iif`, `from_callback`, `using`.
 *   **RxJS Parity, Tier 1b**: `ReplaySubject`, `AsyncSubject`, `share`, `share_replay`, `publish_replay`, `publish_behavior`, `publish_last`, `catch_error`, the `timeout` family with `TimeoutError`, `repeat`, `repeat_forever`, `exhaust_map`, `audit`, `audit_time`.
