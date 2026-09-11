@@ -56,8 +56,9 @@ Operators that transform items that are emitted by an Observable.
 - [x] Materialize/Dematerialize — represent both the items emitted and the notifications sent as emitted items, or reverse this process
   - `materialize` emits `Notification<Item, Err>`; `dematerialize` replays them
 - [x] Window — periodically subdivide items from an Observable into Observable windows and emit these windows rather than emitting the items one at a time
-  - `window(notifier)`, `window_count(count)`, `window_time(duration)`
+  - `window(notifier)`, `window_count(count)`, `window_time(duration)`, `window_when(closing_selector)`, `window_toggle(openings, closing_selector)`
 - [x] MergeScan — accumulate through observables (`merge_scan`)
+- [x] SwitchScan — accumulate through observables, switching to the latest (`switch_scan`)
 - [x] Expand — recursively project and merge (`expand`)
 
 ### Filtering Observables
@@ -67,7 +68,7 @@ Operators that selectively emit items from a source Observable.
 - [x] Debounce — only emit an item from an Observable if a particular timespan has passed without it emitting another item
   - [x] Throttle
   - [x] ThrottleTime
-  - [x] Debounce
+  - [x] Debounce (`debounce(duration)`; `debounce_when(selector)` for a per-item duration Observable)
   - [x] Audit / AuditTime (`audit`, `audit_time`, `audit_time_with`)
 - [x] Distinct — suppress duplicate items emitted by an Observable
   - [x] DistinctUntilChanged — only emit when the current value is different than the last
@@ -81,6 +82,7 @@ Operators that selectively emit items from a source Observable.
 - [x] Last — emit only the last item emitted by an Observable
 - [x] Single — emit the only item, or error with `SingleError` (`single`)
 - [x] Sample — emit the most recent item emitted by an Observable within periodic time intervals
+  - `sample(notifier)`, `sample_time(period)`
 - [x] Skip — suppress the first n items emitted by an Observable
 - [x] SkipLast — suppress the last n items emitted by an Observable
 - [x] SkipWhile — suppress items emitted by an Observable until a specified condition becomes false
@@ -195,7 +197,8 @@ Specialty Observables that have more precisely-controlled subscription dynamics
 
 - [x] Future - `to_future` converts an observable to a `Future`
 - [x] Stream - `to_stream` converts an observable to `Stream`
-- [ ] To — convert an Observable into another object or data structure
+- [x] To — convert an Observable into another object or data structure
+  - `collect`, `collect_into`, `to_vec` (RxJS `toArray`)
 
 ## Subjects
 
@@ -205,7 +208,7 @@ Specialty Observables that have more precisely-controlled subscription dynamics
 - [x] PublishSubject — emits to an observer only those items that are emitted by the source Observable(s) subsequent to the time of the subscription
   - The standard `Subject` in rxRust (`Local::subject()` / `Shared::subject()`) behaves as a PublishSubject.
 - [x] ReplaySubject — emits to any observer all of the items that were emitted by the source Observable(s), regardless of when the observer subscribes
-  - `replay_subject(capacity)` / `replay_subject_unbounded()`; time-windowed replay is not implemented
+  - `replay_subject(capacity)` / `replay_subject_unbounded()` / `replay_subject_with_window(capacity, window)`
 
 ## Schedulers
 

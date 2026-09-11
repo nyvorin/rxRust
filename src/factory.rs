@@ -389,6 +389,38 @@ pub trait ObservableFactory: Context<Inner = ()> {
     Self::lift(ReplaySubject::new(None))
   }
 
+  /// Create a `ReplaySubject` that replays at most `capacity` items (all if
+  /// `None`) and forgets items older than `window` (RxJS `ReplaySubject`
+  /// with `windowTime`)
+  ///
+  /// # Examples
+  ///
+  /// ```rust
+  /// use std::{cell::RefCell, convert::Infallible, rc::Rc, time::Duration};
+  ///
+  /// use rxrust::prelude::*;
+  ///
+  /// let mut subject =
+  ///   Local::replay_subject_with_window::<i32, Infallible>(Some(2), Duration::from_secs(60));
+  /// subject.next(1);
+  /// subject.next(2);
+  /// subject.next(3);
+  /// let replayed = Rc::new(RefCell::new(Vec::new()));
+  /// let sink = replayed.clone();
+  /// subject
+  ///   .clone()
+  ///   .subscribe(move |v| sink.borrow_mut().push(v));
+  /// assert_eq!(*replayed.borrow(), vec![2, 3]);
+  /// ```
+  #[allow(clippy::type_complexity)]
+  fn replay_subject_with_window<'a, Item: Clone, Err: Clone>(
+    capacity: Option<usize>, window: Duration,
+  ) -> Self::With<
+    ReplaySubject<SubjectPtr<'a, Self, Item, Err>, Self::RcMut<ReplayBuffer<Item, Err>>>,
+  > {
+    Self::lift(ReplaySubject::new_with_window(capacity, window))
+  }
+
   /// Creates an `AsyncSubject`, which emits only its last value, on
   /// completion.
   #[allow(clippy::type_complexity)]
